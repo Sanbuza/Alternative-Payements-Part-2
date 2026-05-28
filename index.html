@@ -1,0 +1,1241 @@
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --navy:#0F1B3D;--navy2:#1A2B52;--teal:#00C9B1;--teal2:#00E5CF;--teal-dim:#00C9B120;
+  --blue:#4B6CF5;--blue-dim:#4B6CF512;
+  --white:#FFFFFF;--off:#F4F6FB;--border:#E2E8F4;--border2:#CBD5E8;
+  --txt:#0F1B3D;--txt2:#4A5578;--txt3:#8B96B5;
+  --success:#10B981;--warn:#F59E0B;--danger:#EF4444;
+  --r:10px;--rs:6px;--shadow:0 2px 12px rgba(15,27,61,.08);--shadow2:0 8px 32px rgba(15,27,61,.14);
+}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+.spin{animation:_s .7s linear infinite}
+@keyframes _s{to{transform:rotate(360deg)}}
+.sb{overflow:hidden;transition:max-height .22s ease}
+.sb.open{max-height:9999px}
+input,select,textarea{
+  font-family:'DM Sans',sans-serif;
+  font-size:13px;
+  background:var(--white);
+  border:1.5px solid var(--border2);
+  border-radius:var(--rs);
+  padding:8px 11px;
+  color:var(--txt);
+  outline:none;
+  transition:border-color .15s,box-shadow .15s;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-dim);}
+input::placeholder,textarea::placeholder{color:var(--txt3)}
+select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238B96B5' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 11px center;padding-right:30px}
+button{font-family:'DM Sans',sans-serif;cursor:pointer}
+</style>
+
+<h2 class="sr-only">Alternative Payments — Sales to Onboarding Handover</h2>
+<div id="hi" style="font-family:'DM Sans',sans-serif;padding:.75rem 0;max-width:700px"></div>
+
+<script>
+const T='#00C9B1',TL='#E6FAF8',TD='#065F56',TB='#4B6CF5';
+const PC=['#0F1B3D','#1A2B52','#00C9B1','#4B6CF5'];
+const RC={
+  Low:{bg:'#ECFDF5',c:'#065F46',border:'#6EE7B7'},
+  Medium:{bg:'#FFFBEB',c:'#92400E',border:'#FCD34D'},
+  High:{bg:'#FEF2F2',c:'#991B1B',border:'#FCA5A5'}
+};
+const AC=[
+  {bg:'#FEF2F2',c:'#DC2626',dot:'#EF4444'},
+  {bg:'#FFFBEB',c:'#D97706',dot:'#F59E0B'},
+  {bg:'#ECFDF5',c:'#059669',dot:'#10B981'}
+];
+const CSM_OPTIONS=['Santiago Bustos','Mateo Mejia'];
+
+let S={
+  role:'Sales',status:'draft',meta:{},
+  signoff:null,signName:'',signConfirm:false,csmNotes:'',
+  repName:'',assignedCSM:'',
+  open:{s0:true,s1:false,s2:false,s3:false,s4:false,s5:false,s6:false},
+  f:{pName:'',pType:'Direct',industry:'',size:'',cv:'',sd:'',
+    champ:{n:'',p:'',e:''},sub:{n:'',p:'',e:''},sponsor:{n:'',p:'',e:''},
+    notes:'',legacyMig:'no',intCmplx:'',tools:'',ttv:'',earlyWins:'',techNotes:''},
+  others:[],systems:[],objectives:[],
+  cFiles:[],tFiles:[],ctxSum:'',procCtx:false,
+  view:'form',genStep:'',result:null,tab:'summary',err:'',nid:1
+};
+
+function uid(){return S.nid++;}
+function track(k){S.meta[k]={role:S.role,time:Date.now()};}
+function rel(ts){if(!ts)return'';const d=Date.now()-ts;if(d<60000)return'just now';if(d<3600000)return Math.floor(d/60000)+'m ago';return Math.floor(d/3600000)+'h ago';}
+
+function el(tag,a,...kids){
+  const e=document.createElement(tag);
+  for(const[k,v]of Object.entries(a||{})){
+    if(k==='css')Object.assign(e.style,v);
+    else if(k==='cls')e.className=v;
+    else if(k.startsWith('on'))e.addEventListener(k.slice(2),v);
+    else e.setAttribute(k,v);
+  }
+  kids.flat().forEach(k=>{if(k==null)return;e.appendChild(typeof k==='string'?document.createTextNode(k):k);});
+  return e;
+}
+
+function ic(n,css={}){
+  const i=document.createElement('i');
+  i.className='ti ti-'+n;
+  i.setAttribute('aria-hidden','true');
+  Object.assign(i.style,{fontSize:'15px',lineHeight:'1',...css});
+  return i;
+}
+
+function lbl(t,sub){
+  const w=el('div',{css:{marginBottom:'5px'}});
+  w.appendChild(el('label',{css:{fontSize:'12px',fontWeight:'600',color:'#4A5578',display:'block',letterSpacing:'0.01em'}},t));
+  if(sub)w.appendChild(el('span',{css:{fontSize:'11px',color:'#8B96B5'}},sub));
+  return w;
+}
+
+function inp(v,ph,cb,type='text'){
+  const e=el('input',{type,placeholder:ph,css:{width:'100%',boxSizing:'border-box'}});
+  e.value=v;e.addEventListener('input',ev=>cb(ev.target.value));return e;
+}
+
+function txa(v,ph,cb,mh='80px'){
+  const e=el('textarea',{placeholder:ph,css:{width:'100%',boxSizing:'border-box',minHeight:mh,resize:'vertical',lineHeight:'1.6'}});
+  e.value=v;e.addEventListener('input',ev=>cb(ev.target.value));return e;
+}
+
+function drp(v,opts,cb){
+  const e=el('select',{css:{width:'100%',boxSizing:'border-box'}});
+  e.appendChild(el('option',{value:''},'Select…'));
+  opts.forEach(o=>{const op=el('option',{},o);if(v===o)op.selected=true;e.appendChild(op);});
+  e.addEventListener('change',ev=>cb(ev.target.value));return e;
+}
+
+function fw(t,c,span,sub){
+  const d=el('div',{css:span?{gridColumn:'1/-1'}:{}});
+  d.append(lbl(t,sub),c);return d;
+}
+
+function dv(){
+  return el('div',{css:{height:'1px',background:'#E2E8F4',margin:'14px 0'}});
+}
+
+function tog(opts,cur,cb){
+  const w=el('div',{css:{display:'flex',gap:'4px',background:'#F4F6FB',borderRadius:'8px',padding:'3px'}});
+  opts.forEach(v=>{
+    const a=cur===v;
+    const b=el('button',{css:{
+      flex:'1',padding:'7px 8px',
+      background:a?'#fff':'transparent',
+      color:a?'#0F1B3D':'#8B96B5',
+      border:'none',
+      borderRadius:'6px',
+      fontFamily:'inherit',fontSize:'12px',fontWeight:a?'600':'400',
+      boxShadow:a?'0 1px 4px rgba(15,27,61,.1)':'none',
+      transition:'all .15s'
+    }},v);
+    b.addEventListener('click',()=>cb(v));w.appendChild(b);
+  });return w;
+}
+
+function compl(k){
+  const f=S.f;
+  if(k==='s0')return S.repName&&S.assignedCSM?'done':S.repName||S.assignedCSM?'partial':'empty';
+  if(k==='s1')return f.pName&&f.industry&&f.size?'done':f.pName?'partial':'empty';
+  if(k==='s2')return f.champ.n&&f.champ.e?'done':f.champ.n?'partial':'empty';
+  if(k==='s3')return S.ctxSum?'done':(f.notes||S.cFiles.length)?'partial':'empty';
+  if(k==='s4')return f.intCmplx?'done':'empty';
+  if(k==='s5')return(S.objectives.some(o=>o.v)&&f.ttv)?'done':(S.objectives.some(o=>o.v)||f.ttv)?'partial':'empty';
+  if(k==='s6')return S.tFiles.length?'done':'empty';
+  return'empty';
+}
+
+function sdot(k){
+  const s=compl(k);
+  const colors={done:'#00C9B1',partial:'#F59E0B',empty:'#CBD5E8'};
+  return el('div',{css:{
+    width:'8px',height:'8px',borderRadius:'50%',
+    background:colors[s],flexShrink:'0',
+    boxShadow:s==='done'?'0 0 0 3px #00C9B120':''
+  }});
+}
+
+function mtag(k){
+  const m=S.meta[k];if(!m)return null;
+  const isSales=m.role==='Sales';
+  return el('span',{css:{
+    fontSize:'10px',padding:'2px 8px',borderRadius:'20px',
+    background:isSales?'#EFF6FF':'#E6FAF8',
+    color:isSales?'#1D4ED8':'#065F56',
+    fontWeight:'500',flexShrink:'0'
+  }},m.role+' · '+rel(m.time));
+}
+
+function card(opts={}){
+  return el('div',{css:{
+    background:'#fff',
+    border:`1.5px solid ${opts.border||'#E2E8F4'}`,
+    borderRadius:'12px',
+    padding:opts.pad||'16px',
+    boxShadow:'0 1px 6px rgba(15,27,61,.06)',
+    ...(opts.css||{})
+  }});
+}
+
+function section(k,ico,title,fn,subtitle){
+  const open=S.open[k];
+  const w=el('div',{css:{
+    border:'1.5px solid '+(compl(k)==='done'?'#00C9B140':'#E2E8F4'),
+    borderRadius:'12px',marginBottom:'8px',overflow:'hidden',
+    boxShadow:'0 1px 6px rgba(15,27,61,.05)',
+    transition:'border-color .2s'
+  }});
+  const hdr=el('button',{css:{
+    width:'100%',background:open?'#F8FAFF':'#fff',
+    border:'none',padding:'13px 16px',
+    display:'flex',alignItems:'center',gap:'10px',
+    cursor:'pointer',fontFamily:'inherit',textAlign:'left',
+    borderBottom:open?'1.5px solid #E2E8F4':'none'
+  }});
+
+  // icon badge
+  const ibadge=el('div',{css:{
+    width:'32px',height:'32px',borderRadius:'8px',
+    background:open?'#0F1B3D':compl(k)==='done'?'#E6FAF8':'#F4F6FB',
+    display:'flex',alignItems:'center',justifyContent:'center',flexShrink:'0'
+  }});
+  ibadge.appendChild(ic(ico,{
+    fontSize:'16px',
+    color:open?'#00C9B1':compl(k)==='done'?'#00C9B1':'#8B96B5'
+  }));
+
+  const titleBlock=el('div',{css:{flex:'1',minWidth:'0'}});
+  titleBlock.appendChild(el('span',{css:{
+    fontSize:'13px',fontWeight:'600',color:'#0F1B3D',display:'block'
+  }},title));
+  if(subtitle)titleBlock.appendChild(el('span',{css:{fontSize:'11px',color:'#8B96B5'}},subtitle));
+
+  const mt=mtag(k);if(mt)hdr.appendChild(ibadge),hdr.appendChild(titleBlock),hdr.appendChild(mt);
+  else hdr.append(ibadge,titleBlock);
+  hdr.append(sdot(k),ic(open?'chevron-up':'chevron-down',{color:'#8B96B5',fontSize:'14px',flexShrink:'0'}));
+  hdr.addEventListener('click',()=>{S.open[k]=!open;render();});
+
+  const body=el('div',{cls:'sb'+(open?' open':'')});
+  if(open){
+    const inner=el('div',{css:{padding:'16px',background:'#fff'}});
+    inner.appendChild(fn());body.appendChild(inner);
+  }
+  w.append(hdr,body);return w;
+}
+
+// AP Logo SVG
+function apLogo(size=32,dark=true){
+  const ns='http://www.w3.org/2000/svg';
+  const wrap=el('div',{css:{display:'flex',alignItems:'center',gap:'9px'}});
+  const svg=document.createElementNS(ns,'svg');
+  svg.setAttribute('width',String(size));svg.setAttribute('height',String(size));
+  svg.setAttribute('viewBox','0 0 40 40');
+  const bg=document.createElementNS(ns,'circle');
+  bg.setAttribute('cx','20');bg.setAttribute('cy','20');bg.setAttribute('r','20');
+  bg.setAttribute('fill','#00C9B1');svg.appendChild(bg);
+  const p1=document.createElementNS(ns,'path');
+  p1.setAttribute('d','M13 28 L20 12 L27 28');
+  p1.setAttribute('stroke','white');p1.setAttribute('stroke-width','2.5');
+  p1.setAttribute('stroke-linecap','round');p1.setAttribute('stroke-linejoin','round');
+  p1.setAttribute('fill','none');svg.appendChild(p1);
+  const p2=document.createElementNS(ns,'path');
+  p2.setAttribute('d','M15.5 23 L24.5 23');
+  p2.setAttribute('stroke','white');p2.setAttribute('stroke-width','2.5');
+  p2.setAttribute('stroke-linecap','round');p2.setAttribute('fill','none');
+  svg.appendChild(p2);wrap.appendChild(svg);
+  const txt=el('div',{});
+  txt.appendChild(el('div',{css:{
+    fontSize:'13px',fontWeight:'700',
+    color:dark?'#fff':'#0F1B3D',
+    letterSpacing:'0.01em',lineHeight:'1.1'
+  }},'Alternative'));
+  txt.appendChild(el('div',{css:{
+    fontSize:'12px',fontWeight:'400',
+    color:dark?'rgba(255,255,255,.65)':'#4A5578',
+    lineHeight:'1.1'
+  }},'Payments'));
+  wrap.appendChild(txt);return wrap;
+}
+
+// Just the icon mark, no text — for compact use
+function apLogoMark(size=24){
+  const ns='http://www.w3.org/2000/svg';
+  const svg=document.createElementNS(ns,'svg');
+  svg.setAttribute('width',String(size));svg.setAttribute('height',String(size));
+  svg.setAttribute('viewBox','0 0 40 40');
+  const bg=document.createElementNS(ns,'circle');
+  bg.setAttribute('cx','20');bg.setAttribute('cy','20');bg.setAttribute('r','20');
+  bg.setAttribute('fill','#00C9B1');svg.appendChild(bg);
+  const p1=document.createElementNS(ns,'path');
+  p1.setAttribute('d','M13 28 L20 12 L27 28');
+  p1.setAttribute('stroke','white');p1.setAttribute('stroke-width','2.5');
+  p1.setAttribute('stroke-linecap','round');p1.setAttribute('stroke-linejoin','round');
+  p1.setAttribute('fill','none');svg.appendChild(p1);
+  const p2=document.createElementNS(ns,'path');
+  p2.setAttribute('d','M15.5 23 L24.5 23');
+  p2.setAttribute('stroke','white');p2.setAttribute('stroke-width','2.5');
+  p2.setAttribute('stroke-linecap','round');p2.setAttribute('fill','none');
+  svg.appendChild(p2);return svg;
+}
+
+function topBar(){
+  const bar=el('div',{css:{
+    display:'flex',alignItems:'center',gap:'12px',marginBottom:'1rem',
+    padding:'12px 18px',
+    background:'linear-gradient(135deg, #0F1B3D 0%, #1A2B52 100%)',
+    borderRadius:'14px',
+    boxShadow:'0 4px 20px rgba(15,27,61,.25)'
+  }});
+  bar.appendChild(apLogo(34,true));
+
+  const div=el('div',{css:{width:'1px',height:'22px',background:'rgba(255,255,255,.15)',flexShrink:'0'}});
+  bar.appendChild(div);
+
+  bar.appendChild(el('span',{css:{
+    fontSize:'12px',fontWeight:'400',
+    color:'rgba(255,255,255,.7)',flex:'1',letterSpacing:'0.01em'
+  }},'Sales → Onboarding Handover'));
+
+  const statusMap={
+    draft:['rgba(255,255,255,.1)','rgba(255,255,255,.6)','Draft'],
+    approved:['#00C9B125','#00E5CF','Approved ✓'],
+    completed:['#00C9B125','#00E5CF','Completed ✓']
+  };
+  const[sbg,sc,slb]=statusMap[S.status]||statusMap.draft;
+  bar.appendChild(el('span',{css:{
+    fontSize:'10px',fontWeight:'600',padding:'4px 10px',
+    borderRadius:'20px',background:sbg,color:sc,
+    letterSpacing:'0.04em',textTransform:'uppercase'
+  }},slb));
+
+  const rs=el('div',{css:{
+    display:'flex',background:'rgba(255,255,255,.1)',
+    border:'1px solid rgba(255,255,255,.18)',
+    borderRadius:'8px',padding:'2px',gap:'2px'
+  }});
+  ['Sales','CSM'].forEach(r=>{
+    const a=S.role===r;
+    const b=el('button',{css:{
+      padding:'4px 12px',border:'none',borderRadius:'6px',
+      fontSize:'11px',fontWeight:a?'600':'400',
+      color:a?'#0F1B3D':'rgba(255,255,255,.6)',
+      background:a?'#fff':'transparent',
+      fontFamily:'inherit',transition:'all .15s'
+    }},r);
+    b.addEventListener('click',()=>{S.role=r;render();});
+    rs.appendChild(b);
+  });
+  bar.appendChild(rs);
+  return bar;
+}
+
+// ----- SECTION RENDERERS -----
+
+function s0(){
+  const w=el('div',{css:{display:'flex',flexDirection:'column',gap:'14px'}});
+  const g=el('div',{css:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px'}});
+
+  const rn=el('div',{});
+  rn.appendChild(lbl('Your full name *','The sales rep submitting this handover'));
+  const ri=el('input',{placeholder:'e.g. Maria Garcia',css:{width:'100%',boxSizing:'border-box'}});
+  ri.value=S.repName;
+  ri.addEventListener('input',ev=>{S.repName=ev.target.value;track('s0');render();});
+  rn.appendChild(ri);g.appendChild(rn);
+
+  const cd=el('div',{});
+  cd.appendChild(lbl('Assign to Specialist *','Who picks this up on day 1'));
+  const se=el('select',{css:{width:'100%',boxSizing:'border-box'}});
+  se.appendChild(el('option',{value:''},'Select specialist…'));
+  CSM_OPTIONS.forEach(o=>{const op=el('option',{},o);if(S.assignedCSM===o)op.selected=true;se.appendChild(op);});
+  se.addEventListener('change',ev=>{S.assignedCSM=ev.target.value;track('s0');render();});
+  cd.appendChild(se);g.appendChild(cd);
+  w.appendChild(g);
+
+  if(S.assignedCSM){
+    const ban=el('div',{css:{
+      background:'linear-gradient(135deg,#E6FAF8,#F0FDF9)',
+      border:'1.5px solid #00C9B140',borderRadius:'10px',
+      padding:'12px 14px',display:'flex',alignItems:'center',gap:'10px'
+    }});
+    const iconCircle=el('div',{css:{
+      width:'32px',height:'32px',borderRadius:'50%',
+      background:'#00C9B1',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:'0'
+    }});
+    iconCircle.appendChild(ic('user-check',{color:'#fff',fontSize:'15px'}));
+    ban.appendChild(iconCircle);
+    const bt=el('div',{});
+    bt.appendChild(el('div',{css:{fontSize:'12px',fontWeight:'600',color:'#065F56'}},'Assigned to '+S.assignedCSM));
+    bt.appendChild(el('div',{css:{fontSize:'11px',color:'#6B7280'}},'They will receive this handover once you sign off'));
+    ban.appendChild(bt);w.appendChild(ban);
+  }
+  return w;
+}
+
+function s1(){
+  const g=el('div',{css:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px'}});
+  const tW=el('div',{});tW.appendChild(lbl('Client type *'));tW.appendChild(tog(['Direct','Channel'],S.f.pType,v=>{S.f.pType=v;track('s1');render();}));
+  const dW=el('div',{});dW.appendChild(lbl('Expected start date'));
+  const di=el('input',{type:'date',css:{width:'100%',boxSizing:'border-box'}});
+  di.value=S.f.sd;di.addEventListener('change',ev=>{S.f.sd=ev.target.value;track('s1');});dW.appendChild(di);
+  g.append(
+    fw('Partner / company name *',inp(S.f.pName,'Acme Corp',v=>{S.f.pName=v;track('s1');})),
+    tW,
+    fw('Industry *',drp(S.f.industry,['FinTech / Payments','Transportation & Logistics','Healthcare','Retail & eCommerce','Manufacturing','Professional Services','MSP / IT Services','Other'],v=>{S.f.industry=v;track('s1');})),
+    fw('Company size *',drp(S.f.size,['1–50 employees','51–200 employees','201–1,000 employees','1,000+ employees'],v=>{S.f.size=v;track('s1');})),
+    fw('Contract value',inp(S.f.cv,'$50,000 ARR',v=>{S.f.cv=v;track('s1');})),
+    dW
+  );
+  return g;
+}
+
+function stkB(lb,ref,rk,ico){
+  const w=el('div',{css:{marginBottom:'14px'}});
+  const hd=el('div',{css:{display:'flex',alignItems:'center',gap:'6px',marginBottom:'8px'}});
+  const dot=el('div',{css:{width:'6px',height:'22px',background:'#00C9B1',borderRadius:'3px'}});
+  hd.append(dot,ic(ico,{fontSize:'14px',color:'#4A5578'}),el('span',{css:{fontSize:'12px',fontWeight:'600',color:'#0F1B3D'}},lb));
+  w.appendChild(hd);
+  const g=el('div',{css:{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'8px'}});
+  [['n','Full name'],['p','Phone'],['e','Email']].forEach(([k,ph])=>{
+    const d=el('div',{});d.appendChild(lbl(ph));
+    const i=el('input',{placeholder:ph,css:{width:'100%',boxSizing:'border-box'}});
+    i.value=ref[k];i.addEventListener('input',ev=>{S.f[rk][k]=ev.target.value;track('s2');});
+    d.appendChild(i);g.appendChild(d);
+  });
+  w.appendChild(g);return w;
+}
+
+function s2(){
+  const w=el('div',{});
+  w.append(stkB('Champion',S.f.champ,'champ','star'),dv(),stkB('Substitute champion',S.f.sub,'sub','user-check'),dv(),stkB('Executive sponsor',S.f.sponsor,'sponsor','briefcase'));
+  if(S.others.length){
+    w.appendChild(dv());
+    w.appendChild(el('p',{css:{fontSize:'12px',fontWeight:'600',color:'#0F1B3D',marginBottom:'8px'}},'Other key stakeholders'));
+    S.others.forEach(stk=>{
+      const row=el('div',{css:{display:'grid',gridTemplateColumns:'1fr 1fr 1fr auto',gap:'8px',marginBottom:'8px',alignItems:'end'}});
+      [['name','Name'],['role','Title'],['email','Email']].forEach(([k,ph])=>{
+        const d=el('div',{});d.appendChild(lbl(ph));
+        const i=el('input',{placeholder:ph,css:{width:'100%',boxSizing:'border-box'}});
+        i.value=stk[k];i.addEventListener('input',ev=>{stk[k]=ev.target.value;track('s2');});
+        d.appendChild(i);row.appendChild(d);
+      });
+      const rm=el('button',{css:{
+        background:'#FEF2F2',border:'1.5px solid #FECACA',borderRadius:'6px',
+        padding:'6px 8px',cursor:'pointer',display:'flex',alignSelf:'end',height:'36px',alignItems:'center'
+      }});
+      rm.appendChild(ic('x',{fontSize:'13px',color:'#DC2626'}));
+      rm.addEventListener('click',()=>{S.others=S.others.filter(x=>x.id!==stk.id);render();});
+      row.appendChild(rm);w.appendChild(row);
+    });
+  }
+  if(S.others.length<5){
+    const ab=el('button',{css:{
+      fontSize:'12px',padding:'7px 12px',cursor:'pointer',
+      display:'flex',alignItems:'center',gap:'5px',fontFamily:'inherit',marginTop:'4px',
+      border:'1.5px dashed #CBD5E8',borderRadius:'8px',
+      background:'transparent',color:'#4A5578',fontWeight:'500'
+    }});
+    ab.append(ic('plus',{fontSize:'13px',color:'#00C9B1'}),'Add stakeholder');
+    ab.addEventListener('click',()=>{S.others.push({id:uid(),name:'',role:'',email:''});render();});
+    w.appendChild(ab);
+  }
+  return w;
+}
+
+function s3(){
+  const w=el('div',{});
+  w.appendChild(lbl('Sales notes & context','Everything the onboarding specialist must know'));
+  w.appendChild(txa(S.f.notes,'Conversations, promises made, objections, internal politics, why they chose us, red flags, competitive mentions, cultural observations…',v=>{S.f.notes=v;track('s3');},'90px'));
+  w.appendChild(el('p',{css:{fontSize:'12px',fontWeight:'600',color:'#4A5578',margin:'14px 0 6px'}},'Upload call transcripts or emails'));
+  w.appendChild(fzone('cFiles'));
+  if(S.cFiles.length)w.appendChild(flist(S.cFiles,'cFiles'));
+  const can=S.f.notes||S.cFiles.length;
+  const pb=el('button',{css:{
+    marginTop:'12px',
+    background:can&&!S.procCtx?'linear-gradient(135deg,#0F1B3D,#1A2B52)':'#F4F6FB',
+    color:can&&!S.procCtx?'#fff':'#8B96B5',
+    border:'none',borderRadius:'8px',padding:'9px 16px',fontSize:'12px',
+    fontWeight:'600',cursor:can?'pointer':'not-allowed',fontFamily:'inherit',
+    display:'flex',alignItems:'center',gap:'7px',
+    boxShadow:can&&!S.procCtx?'0 2px 10px rgba(15,27,61,.2)':''
+  }});
+  pb.disabled=!can||S.procCtx;
+  if(S.procCtx){
+    const sp=el('span',{cls:'spin',css:{width:'13px',height:'13px',border:'2px solid rgba(255,255,255,.3)',borderTopColor:'#fff',borderRadius:'50%',display:'inline-block'}});
+    pb.append(sp,'Processing…');
+  } else {
+    pb.append(ic('sparkles',{fontSize:'13px',color:can?'#00C9B1':'#8B96B5'}),'Process with AI');
+  }
+  pb.addEventListener('click',processCtx);w.appendChild(pb);
+  if(S.ctxSum){
+    w.appendChild(dv());
+    const ah=el('div',{css:{display:'flex',alignItems:'center',gap:'6px',marginBottom:'8px'}});
+    ah.append(
+      el('div',{css:{width:'6px',height:'6px',borderRadius:'50%',background:'#00C9B1'}}),
+      el('span',{css:{fontSize:'11px',fontWeight:'600',color:'#065F56',textTransform:'uppercase',letterSpacing:'0.06em'}},'AI account intelligence — review & edit')
+    );
+    w.appendChild(ah);
+    const sta=el('textarea',{css:{
+      width:'100%',boxSizing:'border-box',minHeight:'110px',resize:'vertical',
+      fontFamily:"'DM Mono',monospace",fontSize:'11.5px',lineHeight:'1.7',
+      background:'#F0FDF9',border:'1.5px solid #00C9B140',
+      borderRadius:'8px',padding:'10px 12px',color:'#065F56'
+    }});
+    sta.value=S.ctxSum;sta.addEventListener('input',ev=>{S.ctxSum=ev.target.value;track('s3');});
+    w.appendChild(sta);
+  }
+  return w;
+}
+
+function s4(){
+  const w=el('div',{css:{display:'flex',flexDirection:'column',gap:'14px'}});
+  const cd=el('div',{});cd.append(lbl('Integration complexity *'),drp(S.f.intCmplx,['Low — minimal integrations','Medium — 1–3 system integrations','High — complex multi-system / ERP'],v=>{S.f.intCmplx=v;track('s4');}));w.appendChild(cd);
+  const lw=el('div',{});
+  lw.appendChild(lbl('Migrating from a legacy system?'));
+  lw.appendChild(tog(['yes','no'],S.f.legacyMig,v=>{S.f.legacyMig=v;track('s4');render();}));
+  if(S.f.legacyMig==='yes'){
+    lw.appendChild(el('p',{css:{fontSize:'12px',fontWeight:'600',color:'#4A5578',margin:'12px 0 6px'}},'Legacy systems to migrate from'));
+    if(!S.systems.length)S.systems.push({id:uid(),v:''});
+    S.systems.forEach(sys=>{
+      const row=el('div',{css:{display:'flex',gap:'8px',marginBottom:'6px',alignItems:'center'}});
+      const i=el('input',{placeholder:'e.g. QuickBooks, SAP, legacy processor…',css:{flex:'1',boxSizing:'border-box'}});
+      i.value=sys.v;i.addEventListener('input',ev=>{sys.v=ev.target.value;track('s4');});
+      const rm=el('button',{css:{background:'#FEF2F2',border:'1.5px solid #FECACA',borderRadius:'6px',padding:'5px 8px',cursor:'pointer',display:'flex'}});
+      rm.appendChild(ic('x',{fontSize:'12px',color:'#DC2626'}));
+      rm.addEventListener('click',()=>{S.systems=S.systems.filter(x=>x.id!==sys.id);if(!S.systems.length)S.systems.push({id:uid(),v:''});render();});
+      row.append(i,rm);lw.appendChild(row);
+    });
+    const as=el('button',{css:{
+      fontSize:'12px',padding:'6px 11px',cursor:'pointer',display:'flex',alignItems:'center',
+      gap:'4px',fontFamily:'inherit',border:'1.5px dashed #CBD5E8',borderRadius:'7px',
+      background:'transparent',color:'#4A5578',fontWeight:'500'
+    }});
+    as.append(ic('plus',{fontSize:'12px',color:'#00C9B1'}),'Add system');
+    as.addEventListener('click',()=>{S.systems.push({id:uid(),v:''});render();});
+    lw.appendChild(as);
+  }
+  w.appendChild(lw);
+  const td=el('div',{});td.append(lbl('Current tools & tech stack'),inp(S.f.tools,'e.g. Salesforce, HubSpot, NetSuite…',v=>{S.f.tools=v;track('s4');}));w.appendChild(td);
+  return w;
+}
+
+function s5(){
+  const w=el('div',{css:{display:'flex',flexDirection:'column',gap:'14px'}});
+  const ow=el('div',{});
+  ow.appendChild(lbl('Business objectives'));
+  if(!S.objectives.length)S.objectives.push({id:uid(),v:''});
+  S.objectives.forEach(obj=>{
+    const row=el('div',{css:{display:'flex',gap:'8px',marginBottom:'6px',alignItems:'center'}});
+    const i=el('input',{placeholder:'e.g. Reduce payment processing time by 40%',css:{flex:'1',boxSizing:'border-box'}});
+    i.value=obj.v;i.addEventListener('input',ev=>{obj.v=ev.target.value;track('s5');});
+    const rm=el('button',{css:{background:'#FEF2F2',border:'1.5px solid #FECACA',borderRadius:'6px',padding:'5px 8px',cursor:'pointer',display:'flex'}});
+    rm.appendChild(ic('x',{fontSize:'12px',color:'#DC2626'}));
+    rm.addEventListener('click',()=>{S.objectives=S.objectives.filter(x=>x.id!==obj.id);if(!S.objectives.length)S.objectives.push({id:uid(),v:''});render();});
+    row.append(i,rm);ow.appendChild(row);
+  });
+  const ao=el('button',{css:{
+    fontSize:'12px',padding:'6px 11px',cursor:'pointer',display:'flex',alignItems:'center',
+    gap:'4px',fontFamily:'inherit',border:'1.5px dashed #CBD5E8',borderRadius:'7px',
+    background:'transparent',color:'#4A5578',fontWeight:'500'
+  }});
+  ao.append(ic('plus',{fontSize:'12px',color:'#00C9B1'}),'Add objective');
+  ao.addEventListener('click',()=>{S.objectives.push({id:uid(),v:''});render();});
+  ow.appendChild(ao);w.appendChild(ow);
+  const td=el('div',{});td.append(lbl('Time to value expectation'),drp(S.f.ttv,['Within 2 weeks','Within 1 month','Within 3 months','Within 6 months','Flexible'],v=>{S.f.ttv=v;track('s5');}));w.appendChild(td);
+  w.appendChild(lbl('Early wins — success at Week 1 / Month 1 / Month 3'));
+  w.appendChild(txa(S.f.earlyWins,'e.g. Week 1: First payment processed. Month 1: Full team trained. Month 3: Reconciliation automated.',v=>{S.f.earlyWins=v;track('s5');},'65px'));
+  return w;
+}
+
+function s6(){
+  const w=el('div',{});
+  w.appendChild(lbl('Upload technical documentation'));
+  w.appendChild(fzone('tFiles'));
+  if(S.tFiles.length)w.appendChild(flist(S.tFiles,'tFiles'));
+  w.appendChild(dv());
+  w.appendChild(lbl('Technical notes or constraints'));
+  w.appendChild(txa(S.f.techNotes,'e.g. Custom ERP requires API auth, firewall whitelist, SSO integration…',v=>{S.f.techNotes=v;track('s6');},'60px'));
+  return w;
+}
+
+function fzone(target){
+  const fa=el('div',{css:{
+    border:'2px dashed #CBD5E8',borderRadius:'10px',padding:'20px',
+    textAlign:'center',cursor:'pointer',background:'#F8FAFF',
+    transition:'border-color .15s,background .15s'
+  }});
+  const fi=el('input',{type:'file',multiple:'true',accept:'.txt,.pdf,.md,.eml,.csv',css:{display:'none'}});
+  fa.appendChild(fi);
+  const iconWrap=el('div',{css:{
+    width:'40px',height:'40px',borderRadius:'50%',
+    background:'#E2E8F4',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 8px'
+  }});
+  iconWrap.appendChild(ic('cloud-upload',{fontSize:'18px',color:'#8B96B5'}));
+  fa.append(iconWrap,
+    el('p',{css:{fontSize:'12px',fontWeight:'500',color:'#4A5578',margin:'0'}},'Click or drag files here'),
+    el('p',{css:{fontSize:'10px',color:'#8B96B5',margin:'3px 0 0'}},'.pdf .txt .md .eml .csv'));
+  fa.addEventListener('click',()=>fi.click());
+  fa.addEventListener('dragover',e=>{e.preventDefault();fa.style.borderColor='#00C9B1';fa.style.background='#E6FAF8';});
+  fa.addEventListener('dragleave',()=>{fa.style.borderColor='';fa.style.background='';});
+  fa.addEventListener('drop',async e=>{e.preventDefault();fa.style.borderColor='';fa.style.background='';for(const f of[...e.dataTransfer.files])await readF(f,target);render();});
+  fi.addEventListener('change',async ev=>{for(const f of[...ev.target.files])await readF(f,target);render();});
+  return fa;
+}
+
+function flist(files,key){
+  const fl=el('div',{css:{marginTop:'8px',display:'flex',flexDirection:'column',gap:'4px'}});
+  files.forEach(f=>{
+    const row=el('div',{css:{
+      display:'flex',alignItems:'center',gap:'8px',
+      background:'#F0FDF9',border:'1.5px solid #00C9B140',
+      borderRadius:'8px',padding:'7px 11px'
+    }});
+    row.append(ic('file-text',{fontSize:'13px',color:'#00C9B1'}),el('span',{css:{fontSize:'11px',color:'#065F56',flex:'1',fontWeight:'500'}},f.name));
+    const rm=el('button',{css:{background:'none',border:'none',cursor:'pointer',padding:'0',display:'flex'}});
+    rm.appendChild(ic('x',{fontSize:'12px',color:'#8B96B5'}));
+    rm.addEventListener('click',()=>{S[key]=S[key].filter(x=>x.name!==f.name);render();});
+    row.appendChild(rm);fl.appendChild(row);
+  });
+  return fl;
+}
+
+async function readF(file,target){
+  const arr=S[target];if(arr.find(f=>f.name===file.name))return;
+  return new Promise(res=>{
+    const r=new FileReader();
+    if(file.type==='application/pdf'){r.onload=e=>{arr.push({name:file.name,b64:e.result.split(',')[1],isPdf:true});res();}; r.readAsDataURL(file);}
+    else{r.onload=e=>{arr.push({name:file.name,text:e.result,isPdf:false});res();};r.readAsText(file);}
+  });
+}
+
+async function processCtx(){
+  if(S.procCtx)return;S.procCtx=true;render();
+  const content=[];
+  if(S.f.notes)content.push({type:'text',text:'SALES NOTES:\n'+S.f.notes});
+  S.cFiles.forEach(f=>{if(f.isPdf)content.push({type:'document',source:{type:'base64',media_type:'application/pdf',data:f.b64}});else content.push({type:'text',text:'FILE: '+f.name+'\n'+f.text});});
+  content.push({type:'text',text:'Return ONLY JSON: {"summary":"2-3 sentence exec summary","keyPainPoints":["p1","p2","p3"],"decisionDynamics":"who holds authority","competitiveContext":"current tools and alternatives considered","culturalNotes":"communication style and urgency","risks":["r1","r2"],"opportunities":["o1","o2"],"csmRecommendations":"specific advice for CSM"}'});
+  try{
+    const d=await(await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,system:'Sales intelligence analyst. Return ONLY valid JSON, no markdown.',messages:[{role:'user',content}]})})).json();
+    const txt=(d.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
+    const p=JSON.parse(txt.replace(/```json|```/g,'').trim());
+    S.ctxSum=`SUMMARY\n${p.summary}\n\nKEY PAIN POINTS\n${(p.keyPainPoints||[]).join(' · ')}\n\nDECISION DYNAMICS\n${p.decisionDynamics}\n\nCOMPETITIVE CONTEXT\n${p.competitiveContext}\n\nCULTURAL NOTES\n${p.culturalNotes}\n\nRISKS\n${(p.risks||[]).join(' · ')}\n\nOPPORTUNITIES\n${(p.opportunities||[]).join(' · ')}\n\nCSM RECOMMENDATIONS\n${p.csmRecommendations}`;
+    track('s3');
+  }catch{S.ctxSum='Could not process — edit manually.';}
+  S.procCtx=false;render();
+}
+
+async function generate(){
+  S.view='generating';S.genStep='Compiling account data…';S.err='';render();
+  const f=S.f;
+  const data=`ACCOUNT: ${f.pName} | ${f.pType} | ${f.industry} | ${f.size}${f.cv?' | '+f.cv:''}${f.sd?' | Start: '+f.sd:''}
+CHAMPION: ${f.champ.n||'TBD'}${f.champ.e?' <'+f.champ.e+'>':''}${f.champ.p?' | '+f.champ.p:''}
+SUBSTITUTE: ${f.sub.n||'TBD'}${f.sub.e?' <'+f.sub.e+'>':''}
+SPONSOR: ${f.sponsor.n||'TBD'}${f.sponsor.e?' <'+f.sponsor.e+'>':''}
+${S.others.length?'OTHERS: '+S.others.map(s=>s.name+(s.role?' ('+s.role+')':'')).join(', '):''}
+INTEGRATION: ${f.intCmplx||'Not specified'} | LEGACY: ${f.legacyMig==='yes'?'Yes — '+(S.systems.map(s=>s.v).filter(Boolean).join(', ')||'TBD'):'No'}
+TOOLS: ${f.tools||'Not specified'}
+OBJECTIVES: ${S.objectives.map(o=>o.v).filter(Boolean).join('; ')||'Not specified'}
+TTV: ${f.ttv||'Not specified'} | EARLY WINS: ${f.earlyWins||'Not specified'}
+${S.tFiles.length?'TECH DOCS: '+S.tFiles.map(t=>t.name).join(', '):''}${f.techNotes?'\nTECH NOTES: '+f.techNotes:''}
+SUBMITTED BY: ${S.repName||'N/A'} TO: ${S.assignedCSM||'N/A'}
+APPROVED BY: ${S.signoff?.name||'N/A'} at ${S.signoff?new Date(S.signoff.time).toLocaleString():'N/A'}
+${S.csmNotes?'CSM OBSERVATIONS:\n'+S.csmNotes:''}${S.ctxSum?'\nACCOUNT INTELLIGENCE:\n'+S.ctxSum:''}`.trim();
+  setTimeout(()=>{S.genStep='Building onboarding intelligence…';render();},900);
+  try{
+    const d=await(await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1500,system:'Expert onboarding strategist. Return ONLY valid JSON: {"executiveSummary":{"accountSnapshot":"2-3 sentences","whyTheyBought":"core motivation","criticalSuccessFactors":["f1","f2","f3"],"watchOuts":["w1","w2"],"csmBriefing":"key things CSM must know"},"riskLevel":"Low|Medium|High","riskFactors":["r1","r2"],"estimatedTimeToValue":"X weeks","weeklyMilestones":[{"week":"Week 1–2","phase":"name","tasks":["t1","t2"]},{"week":"Week 3–4","phase":"name","tasks":["t1","t2"]},{"week":"Week 5–6","phase":"name","tasks":["t1","t2"]},{"week":"Week 7–8","phase":"name","tasks":["t1","t2"]}],"earlyWins":["Week 1 win","Month 1 win","Month 3 win"],"priorityActions":[{"priority":1,"action":"action","rationale":"one sentence","owner":"CSM|Sales|Partner"},{"priority":2,"action":"action","rationale":"one sentence","owner":"CSM|Sales|Partner"},{"priority":3,"action":"action","rationale":"one sentence","owner":"CSM|Sales|Partner"}],"kickoffEmail":{"subject":"subject","body":"2 paragraph email"},"successMetrics":["m1","m2","m3"]}',messages:[{role:'user',content:'Generate complete Sales-to-Onboarding handover:\n'+data}]})})).json();
+    const txt=(d.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
+    S.result=JSON.parse(txt.replace(/```json|```/g,'').trim());
+    S.status='completed';S.view='results';S.tab='summary';render();
+  }catch{S.err='Generation failed — please try again.';S.view='form';render();}
+}
+
+// ----- FORM RENDER -----
+
+function renderForm(){
+  const w=el('div',{});
+  w.appendChild(topBar());
+
+  if(S.status==='approved'){
+    const ban=el('div',{css:{
+      background:'linear-gradient(135deg,#E6FAF8,#F0FDF9)',
+      border:'1.5px solid #00C9B150',borderRadius:'10px',
+      padding:'10px 14px',marginBottom:'10px',
+      display:'flex',alignItems:'center',gap:'10px'
+    }});
+    ban.append(apLogoMark(22),el('span',{css:{fontSize:'12px',color:'#065F56',fontWeight:'500',flex:'1'}},'Approved by '+(S.repName||S.signoff?.name)+' → '+S.assignedCSM+' · '+new Date(S.signoff.time).toLocaleString()));
+    w.appendChild(ban);
+  }
+
+  if(!S.repName||!S.assignedCSM){
+    const hint=el('div',{css:{
+      background:'#FFFBEB',border:'1.5px solid #FCD34D60',borderRadius:'10px',
+      padding:'10px 14px',marginBottom:'10px',
+      display:'flex',alignItems:'center',gap:'9px'
+    }});
+    hint.append(ic('info-circle',{fontSize:'14px',color:'#D97706'}),el('span',{css:{fontSize:'12px',color:'#92400E',fontWeight:'500'}},'Start by entering your name and selecting an onboarding specialist'));
+    w.appendChild(hint);
+  }
+
+  w.append(
+    section('s0','user-circle','Sales rep & assignment',s0,'Who is filing this and who receives it'),
+    section('s1','building-store','Account overview',s1,'Partner details and deal basics'),
+    section('s2','users','Stakeholder mapping',s2,'Champions, sponsors and decision makers'),
+    section('s3','message-dots','Sales context & AI intelligence',s3,'Notes, transcripts, account analysis'),
+    section('s4','settings-2','Technical profile',s4,'Integration complexity and legacy migration'),
+    section('s5','target','Objectives & time to value',s5,'Goals, wins and activation milestones'),
+    section('s6','files','Technical documentation',s6,'Optional API docs and specs')
+  );
+
+  if(S.err){
+    const eb=el('div',{css:{
+      background:'#FEF2F2',border:'1.5px solid #FECACA',borderRadius:'8px',
+      padding:'10px 13px',marginTop:'8px',
+      display:'flex',alignItems:'center',gap:'7px'
+    }});
+    eb.append(ic('alert-triangle',{fontSize:'13px',color:'#DC2626'}),el('span',{css:{fontSize:'12px',color:'#991B1B'}},S.err));
+    w.appendChild(eb);
+  }
+
+  const isValid=S.repName&&S.assignedCSM&&S.f.pName&&S.f.industry&&S.f.size;
+  const lb=S.status==='approved'?(S.role==='CSM'?'Review & generate plan':'View approved handover'):'Preview & sign off';
+  const gb=el('button',{css:{
+    marginTop:'12px',width:'100%',
+    background:isValid?'linear-gradient(135deg,#0F1B3D 0%,#1A2B52 100%)':'#F4F6FB',
+    color:isValid?'#fff':'#8B96B5',border:'none',borderRadius:'10px',
+    padding:'13px',fontSize:'13px',fontWeight:'600',
+    cursor:isValid?'pointer':'not-allowed',fontFamily:'inherit',
+    display:'flex',alignItems:'center',justifyContent:'center',gap:'8px',
+    boxShadow:isValid?'0 4px 16px rgba(15,27,61,.25)':''
+  }});
+  gb.disabled=!isValid;
+  gb.append(ic(S.status==='approved'?'layout-dashboard':'circle-check',{fontSize:'16px',color:isValid?'#00C9B1':'#8B96B5'}),lb);
+  gb.addEventListener('click',()=>{
+    if(!isValid){S.err='Please complete: your name, specialist, partner name, industry, and company size.';render();return;}
+    S.view='review';render();
+  });
+  w.appendChild(gb);
+  w.appendChild(apFooter());
+  return w;
+}
+
+// ----- REVIEW RENDER -----
+
+function renderReview(){
+  const f=S.f;const w=el('div',{});
+  w.appendChild(topBar());
+
+  const hd=el('div',{css:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'18px'}});
+  const hl=el('div',{});
+  hl.append(
+    el('p',{css:{fontWeight:'700',fontSize:'18px',margin:'0 0 2px',color:'#0F1B3D'}},'Handover review'),
+    el('p',{css:{fontSize:'12px',color:'#8B96B5',margin:'0'}},'Check everything before signing off')
+  );
+  const bk=el('button',{css:{
+    fontSize:'12px',padding:'7px 13px',cursor:'pointer',fontFamily:'inherit',
+    border:'1.5px solid #E2E8F4',borderRadius:'8px',
+    background:'#fff',color:'#4A5578',display:'flex',alignItems:'center',gap:'5px',
+    fontWeight:'500'
+  }});
+  bk.append(ic('arrow-left',{fontSize:'13px'}),'Edit');
+  bk.addEventListener('click',()=>{S.view='form';render();});
+  hd.append(hl,bk);w.appendChild(hd);
+
+  // assignment card
+  const asCard=el('div',{css:{
+    background:'linear-gradient(135deg,#0F1B3D,#1A2B52)',
+    borderRadius:'12px',padding:'14px 16px',marginBottom:'10px',
+    display:'flex',alignItems:'center',gap:'12px'
+  }});
+  const arrow=el('div',{css:{
+    display:'flex',alignItems:'center',gap:'8px',flex:'1'
+  }});
+  const fromBadge=el('div',{css:{background:'rgba(255,255,255,.12)',borderRadius:'20px',padding:'4px 12px',fontSize:'12px',color:'rgba(255,255,255,.85)',fontWeight:'500'}},S.repName||'—');
+  const arrowIco=ic('arrow-narrow-right',{fontSize:'18px',color:'#00C9B1'});
+  const toBadge=el('div',{css:{background:'#00C9B1',borderRadius:'20px',padding:'4px 12px',fontSize:'12px',color:'#0F1B3D',fontWeight:'700'}},S.assignedCSM||'—');
+  arrow.append(fromBadge,arrowIco,toBadge);
+  asCard.append(arrow,el('span',{css:{fontSize:'10px',color:'rgba(255,255,255,.4)',fontWeight:'500',textTransform:'uppercase',letterSpacing:'0.06em'}},'Routing'));
+  w.appendChild(asCard);
+
+  function rcard(title,rows,tealBorder){
+    const c=el('div',{css:{
+      background:'#fff',
+      border:'1.5px solid '+(tealBorder?'#00C9B140':'#E2E8F4'),
+      borderRadius:'10px',padding:'13px 15px',marginBottom:'8px',
+      boxShadow:'0 1px 5px rgba(15,27,61,.05)'
+    }});
+    c.appendChild(el('p',{css:{fontSize:'10px',fontWeight:'700',color:tealBorder?'#065F56':'#8B96B5',textTransform:'uppercase',letterSpacing:'.06em',margin:'0 0 9px'}},title));
+    rows.forEach(([l,v])=>{
+      if(!v)return;
+      const row=el('div',{css:{display:'flex',justifyContent:'space-between',gap:'12px',marginBottom:'4px'}});
+      row.append(
+        el('span',{css:{fontSize:'12px',color:'#8B96B5',flexShrink:'0'}},l),
+        el('span',{css:{fontSize:'12px',color:'#0F1B3D',textAlign:'right',maxWidth:'60%',fontWeight:'500'}},v)
+      );
+      c.appendChild(row);
+    });
+    return c;
+  }
+
+  w.append(
+    rcard('Account',[['Company',f.pName],['Type',f.pType],['Industry',f.industry],['Size',f.size],['Contract',f.cv||'—'],['Start',f.sd||'—']]),
+    rcard('Champion',[['Name',f.champ.n||'—'],['Phone',f.champ.p||'—'],['Email',f.champ.e||'—']]),
+    rcard('Substitute champion',[['Name',f.sub.n||'—'],['Email',f.sub.e||'—']]),
+    rcard('Sponsor',[['Name',f.sponsor.n||'—'],['Email',f.sponsor.e||'—']]),
+    rcard('Technical',[['Integration',f.intCmplx||'—'],['Legacy',f.legacyMig==='yes'?S.systems.map(s=>s.v).filter(Boolean).join(', ')||'Yes':'No'],['Tools',f.tools||'—']]),
+    rcard('Objectives & TTV',[['Objectives',S.objectives.map(o=>o.v).filter(Boolean).join(' · ')||'—'],['TTV',f.ttv||'—'],['Early wins',f.earlyWins||'—']])
+  );
+
+  if(S.ctxSum){
+    const ai=rcard('AI account intelligence',[],true);
+    ai.appendChild(el('p',{css:{fontSize:'12px',color:'#065F56',lineHeight:'1.7',margin:'0',whiteSpace:'pre-wrap',fontFamily:"'DM Mono',monospace",fontSize:'11px'}},S.ctxSum));
+    w.appendChild(ai);
+  }
+
+  if(S.status==='approved'){
+    w.appendChild(dv());
+    if(S.role==='CSM'){
+      const ah=el('div',{css:{display:'flex',alignItems:'center',gap:'6px',marginBottom:'8px'}});
+      ah.append(ic('message-circle',{fontSize:'14px',color:'#00C9B1'}),el('span',{css:{fontSize:'12px',fontWeight:'600',color:'#065F56'}},'Onboarding specialist intake observations'));
+      w.appendChild(ah);
+      w.appendChild(txa(S.csmNotes,'Add your observations, initial concerns, or notes for the kickoff call…',v=>{S.csmNotes=v;},'75px'));
+    } else if(S.csmNotes){
+      w.appendChild(el('div',{css:{
+        background:'#F0FDF9',border:'1.5px solid #00C9B140',borderRadius:'8px',
+        padding:'10px 13px',fontSize:'12px',color:'#065F56',lineHeight:'1.6',whiteSpace:'pre-wrap'
+      }},S.csmNotes));
+    }
+  }
+
+  if(S.status==='draft'&&S.role==='Sales'){
+    w.appendChild(dv());
+    const sf=el('div',{css:{
+      background:'#F8FAFF',borderRadius:'12px',padding:'18px',
+      border:'1.5px solid #E2E8F4',
+      boxShadow:'0 2px 12px rgba(15,27,61,.06)'
+    }});
+
+    const sfh=el('div',{css:{display:'flex',alignItems:'center',gap:'8px',marginBottom:'16px'}});
+    const sfhDot=el('div',{css:{width:'4px',height:'20px',background:'linear-gradient(180deg,#00C9B1,#4B6CF5)',borderRadius:'2px'}});
+    sfh.append(sfhDot,el('span',{css:{fontWeight:'700',fontSize:'14px',color:'#0F1B3D'}},'Sales sign-off'));
+    sf.appendChild(sfh);
+
+    sf.appendChild(lbl('Your full name *'));
+    const ni=el('input',{placeholder:'e.g. Maria Garcia',css:{width:'100%',boxSizing:'border-box',marginBottom:'12px'}});
+    ni.value=S.signName||S.repName;if(!S.signName&&S.repName)S.signName=S.repName;
+
+    const specLine=el('div',{css:{
+      background:'linear-gradient(135deg,#E6FAF8,#EFF6FF)',
+      border:'1.5px solid #00C9B140',borderRadius:'8px',
+      padding:'10px 13px',marginBottom:'14px',
+      display:'flex',alignItems:'center',gap:'9px'
+    }});
+    specLine.append(
+      apLogoMark(18),
+      el('span',{css:{fontSize:'12px',color:'#065F56',fontWeight:'500'}},'Submitting to '),
+      el('span',{css:{fontSize:'12px',fontWeight:'700',color:'#0F1B3D'}},S.assignedCSM||'—')
+    );
+    sf.appendChild(ni);sf.appendChild(specLine);
+
+    const ab=el('button',{css:{
+      width:'100%',
+      background:'linear-gradient(135deg,#0F1B3D,#1A2B52)',
+      color:'#fff',border:'none',borderRadius:'10px',
+      padding:'12px',fontSize:'13px',fontWeight:'600',
+      cursor:'not-allowed',fontFamily:'inherit',
+      display:'flex',alignItems:'center',justifyContent:'center',gap:'8px',
+      opacity:'0.35',transition:'opacity .15s'
+    }});
+    ab.disabled=true;
+    ab.append(apLogoMark(18),'Approve & send to '+(S.assignedCSM||'specialist'));
+
+    function upd(){
+      const ok=S.signName.trim()&&S.signConfirm;
+      ab.disabled=!ok;ab.style.opacity=ok?'1':'0.35';ab.style.cursor=ok?'pointer':'not-allowed';
+      if(ok)ab.style.boxShadow='0 4px 16px rgba(15,27,61,.25)';
+      else ab.style.boxShadow='none';
+    }
+    ni.addEventListener('input',ev=>{S.signName=ev.target.value;upd();});
+
+    const cl=el('div',{css:{display:'flex',alignItems:'flex-start',gap:'9px',marginBottom:'14px'}});
+    const cb=el('input',{type:'checkbox',css:{marginTop:'2px',flexShrink:'0',accentColor:'#00C9B1'}});
+    cb.checked=S.signConfirm;
+    cb.addEventListener('change',ev=>{S.signConfirm=ev.target.checked;upd();});
+    cl.append(cb,el('span',{css:{fontSize:'12px',color:'#4A5578',lineHeight:'1.6'}},'I confirm all information is accurate and complete. This handover is ready for the Onboarding team.'));
+    sf.appendChild(cl);
+    ab.addEventListener('click',()=>{
+      if(!S.signName.trim()||!S.signConfirm)return;
+      S.signoff={name:S.signName.trim(),time:Date.now()};S.status='approved';render();
+    });
+    sf.appendChild(ab);w.appendChild(sf);
+    upd();
+  }
+
+  if(S.status==='approved'){
+    const ban=el('div',{css:{
+      background:'linear-gradient(135deg,#E6FAF8,#F0FDF9)',
+      border:'1.5px solid #00C9B150',borderRadius:'10px',
+      padding:'12px 14px',marginTop:'12px',
+      display:'flex',alignItems:'center',gap:'10px'
+    }});
+    const ck=el('div',{css:{flexShrink:'0'}});
+    ck.appendChild(apLogoMark(32));
+    const bt=el('div',{});
+    bt.append(
+      el('p',{css:{fontWeight:'700',fontSize:'13px',color:'#065F56',margin:'0 0 1px'}},'Approved by '+(S.repName||S.signoff.name)+' → '+S.assignedCSM),
+      el('p',{css:{fontSize:'11px',color:'#8B96B5',margin:'0'}},new Date(S.signoff.time).toLocaleString())
+    );
+    ban.append(ck,bt);w.appendChild(ban);
+
+    const gb=el('button',{css:{
+      marginTop:'10px',width:'100%',
+      background:'linear-gradient(135deg,#00C9B1,#00A896)',
+      color:'#0F1B3D',border:'none',borderRadius:'10px',
+      padding:'13px',fontSize:'13px',fontWeight:'700',
+      cursor:'pointer',fontFamily:'inherit',
+      display:'flex',alignItems:'center',justifyContent:'center',gap:'8px',
+      boxShadow:'0 4px 20px rgba(0,201,177,.35)'
+    }});
+    gb.append(ic('sparkles',{fontSize:'16px',color:'#0F1B3D'}),'Generate handover plan');
+    gb.addEventListener('click',generate);w.appendChild(gb);
+  }
+  w.appendChild(apFooter());
+  return w;
+}
+
+// ----- GENERATING -----
+
+function renderGenerating(){
+  const w=el('div',{});w.appendChild(topBar());
+  const c=el('div',{css:{padding:'3.5rem 0',textAlign:'center'}});
+  // spinning ring around a logo icon
+  const spinWrap=el('div',{css:{position:'relative',width:'72px',height:'72px',margin:'0 auto 20px'}});
+  const ring=el('div',{css:{
+    position:'absolute',inset:'0',
+    border:'3px solid #E2E8F4',borderTopColor:'#00C9B1',
+    borderRadius:'50%'
+  }});
+  ring.className='spin';
+  const logoInner=el('div',{css:{
+    position:'absolute',inset:'8px',
+    background:'linear-gradient(135deg,#0F1B3D,#1A2B52)',
+    borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center'
+  }});
+  // draw A mark inline
+  const ns='http://www.w3.org/2000/svg';
+  const ms=document.createElementNS(ns,'svg');ms.setAttribute('width','28');ms.setAttribute('height','28');ms.setAttribute('viewBox','0 0 40 40');
+  const mp1=document.createElementNS(ns,'path');mp1.setAttribute('d','M13 28 L20 12 L27 28');mp1.setAttribute('stroke','#00C9B1');mp1.setAttribute('stroke-width','2.5');mp1.setAttribute('stroke-linecap','round');mp1.setAttribute('stroke-linejoin','round');mp1.setAttribute('fill','none');ms.appendChild(mp1);
+  const mp2=document.createElementNS(ns,'path');mp2.setAttribute('d','M15.5 23 L24.5 23');mp2.setAttribute('stroke','#00C9B1');mp2.setAttribute('stroke-width','2.5');mp2.setAttribute('stroke-linecap','round');mp2.setAttribute('fill','none');ms.appendChild(mp2);
+  logoInner.appendChild(ms);spinWrap.append(ring,logoInner);
+  c.append(spinWrap,
+    el('p',{css:{fontWeight:'700',fontSize:'15px',marginBottom:'5px',color:'#0F1B3D'}},S.genStep),
+    el('p',{css:{fontSize:'12px',color:'#8B96B5'}},'Building your complete Sales → Onboarding handover…')
+  );
+  w.appendChild(c);
+  w.appendChild(apFooter());
+  return w;
+}
+
+// ----- RESULTS -----
+
+function renderResults(){
+  const r=S.result,f=S.f;
+  const risk=RC[r.riskLevel]||RC.Medium;
+  const w=el('div',{});
+  w.appendChild(topBar());
+
+  // audit trail
+  const audit=el('div',{css:{
+    background:'linear-gradient(135deg,#E6FAF8,#F0FDF9)',
+    border:'1.5px solid #00C9B140',borderRadius:'10px',
+    padding:'9px 14px',marginBottom:'14px',
+    display:'flex',alignItems:'center',gap:'9px'
+  }});
+  audit.append(
+    apLogoMark(20),
+    el('span',{css:{fontSize:'11px',color:'#065F56',fontWeight:'500',flex:'1'}},'Approved by '+(S.repName||S.signoff?.name)+' → '+S.assignedCSM+' · '+(S.signoff?new Date(S.signoff.time).toLocaleString():''))
+  );
+  w.appendChild(audit);
+
+  // header
+  const hdr=el('div',{css:{
+    display:'flex',alignItems:'flex-start',justifyContent:'space-between',
+    marginBottom:'14px',flexWrap:'wrap',gap:'8px'
+  }});
+  const hl=el('div',{});
+  hl.append(
+    el('p',{css:{fontWeight:'800',fontSize:'20px',margin:'0 0 3px',color:'#0F1B3D'}},f.pName),
+    el('p',{css:{fontSize:'12px',color:'#8B96B5',margin:'0'}},f.pType+' · '+f.industry+' · '+f.size)
+  );
+  const hr=el('div',{css:{display:'flex',gap:'6px',alignItems:'center',flexWrap:'wrap'}});
+  const riskBadge=el('div',{css:{
+    display:'flex',alignItems:'center',gap:'5px',
+    background:risk.bg,border:'1.5px solid '+risk.border,
+    fontSize:'11px',fontWeight:'600',padding:'4px 10px',
+    borderRadius:'20px',color:risk.c
+  }});
+  const rDot=el('div',{css:{width:'6px',height:'6px',borderRadius:'50%',background:risk.c}});
+  riskBadge.append(rDot,r.riskLevel+' risk');
+  const ttvBadge=el('div',{css:{
+    display:'flex',alignItems:'center',gap:'5px',
+    background:'#F4F6FB',border:'1.5px solid #E2E8F4',
+    fontSize:'11px',padding:'4px 10px',borderRadius:'20px',color:'#4A5578'
+  }});
+  ttvBadge.append(ic('clock',{fontSize:'12px',color:'#8B96B5'}),r.estimatedTimeToValue);
+  const bk=el('button',{css:{
+    fontSize:'11px',padding:'4px 10px',cursor:'pointer',fontFamily:'inherit',
+    border:'1.5px solid #E2E8F4',borderRadius:'8px',
+    background:'#fff',color:'#4A5578',fontWeight:'500'
+  }});
+  bk.textContent='← Review';
+  bk.addEventListener('click',()=>{S.view='review';render();});
+  hr.append(riskBadge,ttvBadge,bk);hdr.append(hl,hr);w.appendChild(hdr);
+
+  if(r.riskFactors?.length){
+    const rf=el('div',{css:{
+      background:risk.bg,border:'1.5px solid '+risk.border,
+      borderRadius:'8px',padding:'9px 13px',marginBottom:'14px',
+      display:'flex',gap:'6px',flexWrap:'wrap',alignItems:'center'
+    }});
+    rf.appendChild(el('span',{css:{fontSize:'11px',fontWeight:'600',color:risk.c}},'Watch outs:'));
+    r.riskFactors.forEach(x=>rf.appendChild(el('span',{css:{fontSize:'11px',color:risk.c}},'· '+x)));
+    w.appendChild(rf);
+  }
+
+  // tabs
+  const tb=el('div',{css:{
+    display:'flex',borderBottom:'2px solid #E2E8F4',
+    marginBottom:'18px',overflowX:'auto',gap:'0'
+  }});
+  [['summary','layout-dashboard','Summary'],['plan','list-check','Plan'],['actions','bolt','Actions'],['email','mail','Kickoff email']].forEach(([k,icn,lb])=>{
+    const active=S.tab===k;
+    const b=el('button',{css:{
+      padding:'9px 14px',fontSize:'12px',fontWeight:active?'700':'400',
+      background:'transparent',border:'none',
+      borderBottom:`2px solid ${active?'#00C9B1':'transparent'}`,
+      color:active?'#0F1B3D':'#8B96B5',cursor:'pointer',fontFamily:'inherit',
+      display:'flex',alignItems:'center',gap:'5px',whiteSpace:'nowrap',marginBottom:'-2px',
+      transition:'color .15s'
+    }});
+    b.append(ic(icn,{fontSize:'13px',color:active?'#00C9B1':'#8B96B5'}),lb);
+    b.addEventListener('click',()=>{S.tab=k;render();});
+    tb.appendChild(b);
+  });
+  w.appendChild(tb);
+
+  // --- summary tab ---
+  if(S.tab==='summary'&&r.executiveSummary){
+    const es=r.executiveSummary;
+
+    [['account snapshot',es.accountSnapshot,'building','#4B6CF5'],
+     ['why they bought',es.whyTheyBought,'shopping-cart','#00C9B1'],
+     ['onboarding briefing',es.csmBriefing,'message-2','#F59E0B']].forEach(([l,v,icn,accent])=>{
+      if(!v)return;
+      const c=el('div',{css:{
+        background:'#fff',border:'1.5px solid #E2E8F4',borderRadius:'10px',
+        padding:'13px 15px',marginBottom:'8px',
+        borderLeft:'3px solid '+accent,
+        boxShadow:'0 1px 5px rgba(15,27,61,.05)'
+      }});
+      const ch=el('div',{css:{display:'flex',alignItems:'center',gap:'5px',marginBottom:'6px'}});
+      ch.append(ic(icn,{fontSize:'13px',color:accent}),el('span',{css:{fontSize:'10px',fontWeight:'700',color:'#8B96B5',textTransform:'uppercase',letterSpacing:'.06em'}},l));
+      c.append(ch,el('p',{css:{fontSize:'13px',color:'#0F1B3D',margin:'0',lineHeight:'1.65'}},v));
+      w.appendChild(c);
+    });
+
+    if(es.criticalSuccessFactors?.length||es.watchOuts?.length){
+      const rw=el('div',{css:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px',marginBottom:'10px'}});
+      [[es.criticalSuccessFactors,'Critical success factors','check','success','#10B981'],
+       [es.watchOuts,'Watch outs','alert-triangle','warning','#F59E0B']].forEach(([items,lb,icn,v,accent])=>{
+        if(!items?.length)return;
+        const c=el('div',{css:{
+          background:`var(--color-background-${v})`,
+          border:`1.5px solid var(--color-border-${v})`,
+          borderRadius:'10px',padding:'12px 14px'
+        }});
+        const ch=el('div',{css:{display:'flex',alignItems:'center',gap:'5px',margin:'0 0 7px'}});
+        ch.append(ic(icn,{fontSize:'13px',color:`var(--color-text-${v})`}),el('span',{css:{fontSize:'10px',fontWeight:'700',color:`var(--color-text-${v})`,textTransform:'uppercase',letterSpacing:'.06em'}},lb));
+        c.appendChild(ch);
+        items.forEach(it=>c.appendChild(el('p',{css:{fontSize:'12px',color:`var(--color-text-${v})`,margin:'0 0 3px'}},'· '+it)));
+        rw.appendChild(c);
+      });
+      w.appendChild(rw);
+    }
+
+    // contacts
+    const contactsTitle=el('p',{css:{fontSize:'10px',fontWeight:'700',color:'#8B96B5',margin:'12px 0 8px',textTransform:'uppercase',letterSpacing:'.06em'}},'Key contacts');
+    w.appendChild(contactsTitle);
+    const sg=el('div',{css:{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'8px'}});
+    [[S.f.champ,'Champion','star','#F59E0B'],
+     [S.f.sub,'Substitute','user-check','#4B6CF5'],
+     [S.f.sponsor,'Sponsor','briefcase','#00C9B1']].forEach(([stk,role,icn,col])=>{
+      if(!stk.n)return;
+      const c=el('div',{css:{
+        background:'#fff',border:'1.5px solid #E2E8F4',
+        borderRadius:'10px',padding:'11px 13px',
+        borderTop:'3px solid '+col
+      }});
+      c.append(
+        el('p',{css:{fontSize:'10px',color:'#8B96B5',margin:'0 0 3px',display:'flex',alignItems:'center',gap:'3px'}},ic(icn,{fontSize:'11px',color:col}),role),
+        el('p',{css:{fontSize:'13px',fontWeight:'700',color:'#0F1B3D',margin:'0 0 2px'}},stk.n)
+      );
+      if(stk.e)c.appendChild(el('p',{css:{fontSize:'11px',color:'#8B96B5',margin:'0'}},stk.e));
+      sg.appendChild(c);
+    });
+    w.appendChild(sg);
+
+    if(r.earlyWins?.length){
+      w.appendChild(el('p',{css:{fontSize:'10px',fontWeight:'700',color:'#8B96B5',margin:'14px 0 8px',textTransform:'uppercase',letterSpacing:'.06em'}},'Early wins targets'));
+      const eg=el('div',{css:{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'8px'}});
+      ['Week 1','Month 1','Month 3'].forEach((p,i)=>{
+        const c=el('div',{css:{
+          background:'linear-gradient(135deg,#F8FAFF,#EFF6FF)',
+          border:'1.5px solid #E2E8F4',borderRadius:'10px',padding:'11px 13px'
+        }});
+        c.append(
+          el('p',{css:{fontSize:'9px',fontWeight:'700',color:'#4B6CF5',margin:'0 0 4px',textTransform:'uppercase',letterSpacing:'.05em'}},p),
+          el('p',{css:{fontSize:'12px',color:'#0F1B3D',margin:'0',lineHeight:'1.5'}},r.earlyWins[i]||'—')
+        );
+        eg.appendChild(c);
+      });
+      w.appendChild(eg);
+    }
+  }
+
+  // --- plan tab ---
+  if(S.tab==='plan'){
+    const col=el('div',{css:{display:'flex',flexDirection:'column',gap:'0',marginBottom:'14px'}});
+    (r.weeklyMilestones||[]).forEach((m,i)=>{
+      const row=el('div',{css:{display:'flex',gap:'14px',alignItems:'flex-start',marginBottom:'8px'}});
+      const tc=el('div',{css:{display:'flex',flexDirection:'column',alignItems:'center',flexShrink:'0'}});
+      const dot=el('div',{css:{
+        width:'30px',height:'30px',borderRadius:'50%',
+        background:PC[i]||'#0F1B3D',
+        display:'flex',alignItems:'center',justifyContent:'center',
+        color:'#fff',fontSize:'12px',fontWeight:'700',
+        boxShadow:'0 2px 8px rgba(15,27,61,.2)',flexShrink:'0'
+      }},String(i+1));
+      tc.appendChild(dot);
+      if(i<(r.weeklyMilestones.length-1))tc.appendChild(el('div',{css:{width:'2px',height:'18px',background:'#E2E8F4',margin:'4px auto'}}));
+      const crd=el('div',{css:{
+        background:'#fff',border:'1.5px solid #E2E8F4',
+        borderRadius:'10px',padding:'12px 14px',flex:'1',
+        boxShadow:'0 1px 5px rgba(15,27,61,.05)'
+      }});
+      const ch=el('div',{css:{display:'flex',alignItems:'baseline',gap:'8px',marginBottom:'7px'}});
+      ch.append(
+        el('span',{css:{fontWeight:'700',fontSize:'14px',color:'#0F1B3D'}},m.phase),
+        el('span',{css:{fontSize:'11px',color:'#8B96B5',background:'#F4F6FB',padding:'2px 8px',borderRadius:'20px'}},m.week)
+      );
+      crd.appendChild(ch);
+      const ul=el('ul',{css:{margin:'0',paddingLeft:'14px',display:'flex',flexDirection:'column',gap:'3px'}});
+      (m.tasks||[]).forEach(t=>ul.appendChild(el('li',{css:{fontSize:'12px',color:'#4A5578',lineHeight:'1.5'}},t)));
+      crd.appendChild(ul);row.append(tc,crd);col.appendChild(row);
+    });
+    w.appendChild(col);
+    if(r.successMetrics?.length){
+      const sm=el('div',{css:{
+        background:'linear-gradient(135deg,#F8FAFF,#EFF6FF)',
+        border:'1.5px solid #E2E8F4',borderRadius:'10px',padding:'12px 14px'
+      }});
+      sm.appendChild(el('p',{css:{fontSize:'10px',fontWeight:'700',margin:'0 0 8px',color:'#8B96B5',textTransform:'uppercase',letterSpacing:'.06em'}},'Success metrics'));
+      const pills=el('div',{css:{display:'flex',flexWrap:'wrap',gap:'5px'}});
+      r.successMetrics.forEach(m=>pills.appendChild(el('span',{css:{
+        fontSize:'11px',background:'#fff',border:'1.5px solid #E2E8F4',
+        borderRadius:'20px',padding:'4px 11px',color:'#4A5578',fontWeight:'500'
+      }},m)));
+      sm.appendChild(pills);w.appendChild(sm);
+    }
+  }
+
+  // --- actions tab ---
+  if(S.tab==='actions'){
+    const col=el('div',{css:{display:'flex',flexDirection:'column',gap:'8px'}});
+    (r.priorityActions||[]).forEach((a,i)=>{
+      const ac=AC[i]||AC[2];
+      const crd=el('div',{css:{
+        background:'#fff',border:'1.5px solid #E2E8F4',
+        borderRadius:'10px',padding:'14px 15px',
+        display:'flex',gap:'12px',alignItems:'flex-start',
+        boxShadow:'0 1px 5px rgba(15,27,61,.05)'
+      }});
+      const badge=el('div',{css:{
+        width:'28px',height:'28px',borderRadius:'50%',
+        background:ac.bg,border:'1.5px solid '+ac.dot+'60',
+        display:'flex',alignItems:'center',justifyContent:'center',flexShrink:'0'
+      }});
+      badge.appendChild(el('div',{css:{width:'8px',height:'8px',borderRadius:'50%',background:ac.dot}}));
+      const txt=el('div',{css:{flex:'1'}});
+      const th=el('div',{css:{display:'flex',alignItems:'center',gap:'7px',marginBottom:'4px',justifyContent:'space-between'}});
+      th.append(el('span',{css:{fontWeight:'700',fontSize:'14px',color:'#0F1B3D'}},a.action));
+      if(a.owner)th.appendChild(el('span',{css:{
+        fontSize:'10px',fontWeight:'600',padding:'3px 9px',borderRadius:'20px',
+        background:'#F4F6FB',color:'#4A5578',letterSpacing:'0.02em'
+      }},a.owner));
+      txt.appendChild(th);
+      txt.appendChild(el('p',{css:{fontSize:'12px',color:'#8B96B5',margin:'0',lineHeight:'1.5'}},a.rationale));
+      crd.append(badge,txt);col.appendChild(crd);
+    });
+    w.appendChild(col);
+  }
+
+  // --- email tab ---
+  if(S.tab==='email'&&r.kickoffEmail){
+    const sj=el('div',{css:{
+      background:'#F8FAFF',borderRadius:'8px',padding:'10px 14px',marginBottom:'10px',
+      display:'flex',gap:'6px',alignItems:'baseline',border:'1.5px solid #E2E8F4'
+    }});
+    sj.append(
+      el('span',{css:{fontSize:'11px',color:'#8B96B5',flexShrink:'0',fontWeight:'600'}},'Subject:'),
+      el('span',{css:{fontSize:'13px',fontWeight:'600',color:'#0F1B3D'}},r.kickoffEmail.subject)
+    );
+    const body=el('div',{css:{
+      background:'#fff',border:'1.5px solid #E2E8F4',
+      borderRadius:'10px',padding:'16px',marginBottom:'10px',
+      boxShadow:'0 1px 5px rgba(15,27,61,.05)'
+    }});
+    body.appendChild(el('p',{css:{fontSize:'13px',color:'#0F1B3D',lineHeight:'1.75',margin:'0',whiteSpace:'pre-wrap'}},r.kickoffEmail.body));
+    const cb=el('button',{css:{
+      fontSize:'12px',padding:'8px 14px',cursor:'pointer',fontFamily:'inherit',
+      display:'flex',alignItems:'center',gap:'6px',
+      border:'1.5px solid #E2E8F4',borderRadius:'8px',
+      background:'#fff',color:'#4A5578',fontWeight:'500'
+    }});
+    const ci=ic('copy',{fontSize:'13px'});const ct=document.createTextNode('Copy to clipboard');
+    cb.append(ci,ct);
+    cb.addEventListener('click',()=>{
+      navigator.clipboard.writeText('Subject: '+r.kickoffEmail.subject+'\n\n'+r.kickoffEmail.body).then(()=>{
+        ci.className='ti ti-check';ct.textContent='Copied!';
+        cb.style.background='#F0FDF9';cb.style.color='#065F56';cb.style.borderColor='#00C9B140';
+        setTimeout(()=>{ci.className='ti ti-copy';ct.textContent='Copy to clipboard';cb.style.background='';cb.style.color='';cb.style.borderColor='';},2200);
+      });
+    });
+    w.append(sj,body,cb);
+  }
+  w.appendChild(apFooter());
+  return w;
+}
+
+function apFooter(){
+  const f=el('div',{css:{
+    marginTop:'24px',paddingTop:'14px',
+    borderTop:'1.5px solid #E2E8F4',
+    display:'flex',alignItems:'center',justifyContent:'space-between',gap:'10px'
+  }});
+  f.appendChild(apLogo(22,false));
+  f.appendChild(el('span',{css:{fontSize:'10px',color:'#CBD5E8',letterSpacing:'0.04em'}},'Sales → Onboarding Handover · Confidential'));
+  return f;
+}
+
+function render(){
+  const app=document.getElementById('hi');app.innerHTML='';
+  if(S.view==='form')app.appendChild(renderForm());
+  else if(S.view==='review')app.appendChild(renderReview());
+  else if(S.view==='generating')app.appendChild(renderGenerating());
+  else app.appendChild(renderResults());
+}
+render();
+</script>
