@@ -1,7 +1,8 @@
-
+<meta charset="UTF-8">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
 *{margin:0;padding:0;box-sizing:border-box}
+html,body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 :root{
   --navy:#0F1B3D;--navy2:#1A2B52;--teal:#00C9B1;--teal2:#00E5CF;--teal-dim:#00C9B120;
   --blue:#4B6CF5;--blue-dim:#4B6CF512;
@@ -9,11 +10,12 @@
   --txt:#0F1B3D;--txt2:#4A5578;--txt3:#8B96B5;
   --success:#10B981;--warn:#F59E0B;--danger:#EF4444;
   --r:10px;--rs:6px;--shadow:0 2px 12px rgba(15,27,61,.08);--shadow2:0 8px 32px rgba(15,27,61,.14);
+  --ap-purple:#5C2B8A;--ap-teal:#00C9B1;
 }
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
 .spin{animation:_s .7s linear infinite}
 @keyframes _s{to{transform:rotate(360deg)}}
-.sb{overflow:hidden;transition:max-height .22s ease}
+.sb{overflow:hidden;transition:max-height .28s cubic-bezier(.4,0,.2,1)}
 .sb.open{max-height:9999px}
 input,select,textarea{
   font-family:'DM Sans',sans-serif;
@@ -21,15 +23,24 @@ input,select,textarea{
   background:var(--white);
   border:1.5px solid var(--border2);
   border-radius:var(--rs);
-  padding:8px 11px;
+  padding:8px 12px;
   color:var(--txt);
   outline:none;
-  transition:border-color .15s,box-shadow .15s;
+  transition:border-color .18s,box-shadow .18s,background .18s;
+  width:100%;
 }
-input:focus,select:focus,textarea:focus{border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-dim);}
+input:hover,select:hover,textarea:hover{border-color:#a0aec0}
+input:focus,select:focus,textarea:focus{border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-dim);background:#fafffe}
 input::placeholder,textarea::placeholder{color:var(--txt3)}
-select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238B96B5' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 11px center;padding-right:30px}
-button{font-family:'DM Sans',sans-serif;cursor:pointer}
+select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238B96B5' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px;box-sizing:border-box}
+button{font-family:'DM Sans',sans-serif;cursor:pointer;transition:opacity .15s,box-shadow .15s,transform .1s}
+button:active{transform:scale(.985)}
+/* Mobile — stack all 2- and 3-col grids to 1 column */
+@media(max-width:540px){
+  #hi{padding:.5rem 0}
+  .ap-grid-2,.ap-grid-3,.ap-grid-stkr{grid-template-columns:1fr!important}
+  .ap-grid-2>*,.ap-grid-3>*{grid-column:auto!important}
+}
 </style>
 
 <h2 class="sr-only">Alternative Payments — Sales to Onboarding Handover</h2>
@@ -48,7 +59,7 @@ const AC=[
   {bg:'#FFFBEB',c:'#D97706',dot:'#F59E0B'},
   {bg:'#ECFDF5',c:'#059669',dot:'#10B981'}
 ];
-const CSM_OPTIONS=['Santiago Bustos','Mateo Mejia'];
+const CSM_OPTIONS=['Santiago Bustos','Mateo Mejia','Tushar Singh'];
 
 let S={
   role:'Sales',status:'draft',meta:{},
@@ -106,7 +117,7 @@ function txa(v,ph,cb,mh='80px'){
 
 function drp(v,opts,cb){
   const e=el('select',{css:{width:'100%',boxSizing:'border-box'}});
-  e.appendChild(el('option',{value:''},'Select…'));
+  e.appendChild(el('option',{value:''},'Select...'));
   opts.forEach(o=>{const op=el('option',{},o);if(v===o)op.selected=true;e.appendChild(op);});
   e.addEventListener('change',ev=>cb(ev.target.value));return e;
 }
@@ -152,12 +163,48 @@ function compl(k){
 
 function sdot(k){
   const s=compl(k);
-  const colors={done:'#00C9B1',partial:'#F59E0B',empty:'#CBD5E8'};
-  return el('div',{css:{
-    width:'8px',height:'8px',borderRadius:'50%',
-    background:colors[s],flexShrink:'0',
-    boxShadow:s==='done'?'0 0 0 3px #00C9B120':''
+  const map={
+    done:{bg:'#E6FAF8',c:'#00C9B1',label:'Done'},
+    partial:{bg:'#FFFBEB',c:'#F59E0B',label:'In progress'},
+    empty:{bg:'#F4F6FB',c:'#CBD5E8',label:'Not started'}
+  };
+  const {bg,c,label}=map[s];
+  const pill=el('div',{css:{
+    display:'flex',alignItems:'center',gap:'5px',
+    padding:'3px 8px',borderRadius:'20px',
+    background:bg,flexShrink:'0'
   }});
+  const dot=el('div',{css:{width:'7px',height:'7px',borderRadius:'50%',background:c,flexShrink:'0'}});
+  pill.append(dot,el('span',{css:{fontSize:'10px',fontWeight:'600',color:c,lineHeight:'1'}},label));
+  return pill;
+}
+
+// Progress bar — shows X / 7 sections done
+function progressBar(){
+  const keys=['s0','s1','s2','s3','s4','s5','s6'];
+  const done=keys.filter(k=>compl(k)==='done').length;
+  const pct=Math.round((done/keys.length)*100);
+  const wrap=el('div',{css:{marginBottom:'12px'}});
+  const row=el('div',{css:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'6px'}});
+  row.append(
+    el('span',{css:{fontSize:'11px',fontWeight:'600',color:'#4A5578'}},'Form progress'),
+    el('span',{css:{
+      fontSize:'11px',fontWeight:'700',
+      color:done===keys.length?'#00C9B1':'#4A5578'
+    }},done+' / '+keys.length+' sections complete')
+  );
+  const track=el('div',{css:{height:'6px',borderRadius:'3px',background:'#E2E8F4',overflow:'hidden'}});
+  const fill=el('div',{css:{
+    height:'100%',borderRadius:'3px',
+    background:done===keys.length
+      ?'linear-gradient(90deg,#00C9B1,#00E5CF)'
+      :'linear-gradient(90deg,#5C2B8A,#00C9B1)',
+    width:pct+'%',
+    transition:'width .4s cubic-bezier(.4,0,.2,1)'
+  }});
+  track.appendChild(fill);
+  wrap.append(row,track);
+  return wrap;
 }
 
 function mtag(k){
@@ -184,121 +231,136 @@ function card(opts={}){
 
 function section(k,ico,title,fn,subtitle){
   const open=S.open[k];
+  const isDone=compl(k)==='done';
   const w=el('div',{css:{
-    border:'1.5px solid '+(compl(k)==='done'?'#00C9B140':'#E2E8F4'),
+    border:'1.5px solid '+(isDone?'#00C9B135':open?'#CBD5E8':'#E2E8F4'),
     borderRadius:'12px',marginBottom:'8px',overflow:'hidden',
-    boxShadow:'0 1px 6px rgba(15,27,61,.05)',
-    transition:'border-color .2s'
+    boxShadow:open?'0 3px 12px rgba(15,27,61,.08)':'0 1px 4px rgba(15,27,61,.04)',
+    transition:'border-color .2s,box-shadow .2s'
   }});
   const hdr=el('button',{css:{
-    width:'100%',background:open?'#F8FAFF':'#fff',
-    border:'none',padding:'13px 16px',
-    display:'flex',alignItems:'center',gap:'10px',
+    width:'100%',
+    background:open?'#F8FAFF':isDone?'#FAFFFE':'#fff',
+    border:'none',padding:'14px 16px',
+    display:'flex',alignItems:'center',gap:'11px',
     cursor:'pointer',fontFamily:'inherit',textAlign:'left',
-    borderBottom:open?'1.5px solid #E2E8F4':'none'
+    borderBottom:open?'1.5px solid #E2E8F4':'none',
+    transition:'background .15s'
   }});
+  // Hover via mouseenter/leave (CSS :hover won't work on inline-styled buttons reliably)
+  hdr.addEventListener('mouseenter',()=>{if(!open)hdr.style.background=isDone?'#F0FDF9':'#F8FAFF';});
+  hdr.addEventListener('mouseleave',()=>{hdr.style.background=open?'#F8FAFF':isDone?'#FAFFFE':'#fff';});
 
-  // icon badge
+  // Icon badge
   const ibadge=el('div',{css:{
-    width:'32px',height:'32px',borderRadius:'8px',
-    background:open?'#0F1B3D':compl(k)==='done'?'#E6FAF8':'#F4F6FB',
-    display:'flex',alignItems:'center',justifyContent:'center',flexShrink:'0'
+    width:'34px',height:'34px',borderRadius:'9px',
+    background:open?'#0F1B3D':isDone?'#E6FAF8':'#F4F6FB',
+    display:'flex',alignItems:'center',justifyContent:'center',flexShrink:'0',
+    transition:'background .2s'
   }});
-  ibadge.appendChild(ic(ico,{
-    fontSize:'16px',
-    color:open?'#00C9B1':compl(k)==='done'?'#00C9B1':'#8B96B5'
-  }));
+  ibadge.appendChild(ic(ico,{fontSize:'16px',color:open?'#00C9B1':isDone?'#00C9B1':'#8B96B5'}));
 
   const titleBlock=el('div',{css:{flex:'1',minWidth:'0'}});
-  titleBlock.appendChild(el('span',{css:{
-    fontSize:'13px',fontWeight:'600',color:'#0F1B3D',display:'block'
-  }},title));
-  if(subtitle)titleBlock.appendChild(el('span',{css:{fontSize:'11px',color:'#8B96B5'}},subtitle));
+  titleBlock.appendChild(el('span',{css:{fontSize:'13px',fontWeight:'600',color:'#0F1B3D',display:'block'}},title));
+  if(subtitle)titleBlock.appendChild(el('span',{css:{fontSize:'11px',color:'#8B96B5',marginTop:'1px',display:'block'}},subtitle));
 
-  const mt=mtag(k);if(mt)hdr.appendChild(ibadge),hdr.appendChild(titleBlock),hdr.appendChild(mt);
-  else hdr.append(ibadge,titleBlock);
-  hdr.append(sdot(k),ic(open?'chevron-up':'chevron-down',{color:'#8B96B5',fontSize:'14px',flexShrink:'0'}));
+  const mt=mtag(k);
+  if(mt){hdr.append(ibadge,titleBlock,mt);}
+  else{hdr.append(ibadge,titleBlock);}
+  hdr.append(sdot(k),ic(open?'chevron-up':'chevron-down',{color:'#8B96B5',fontSize:'14px',flexShrink:'0',transition:'transform .2s'}));
   hdr.addEventListener('click',()=>{S.open[k]=!open;render();});
 
   const body=el('div',{cls:'sb'+(open?' open':'')});
   if(open){
-    const inner=el('div',{css:{padding:'16px',background:'#fff'}});
+    const inner=el('div',{css:{padding:'18px 16px',background:'#fff'}});
     inner.appendChild(fn());body.appendChild(inner);
   }
   w.append(hdr,body);return w;
 }
 
-// AP Logo SVG
-function apLogo(size=32,dark=true){
+// AP Logo Mark — clean "A" strokes matching the actual AP brand logo, no background shape.
+// variant: 'white' (for dark bg) | 'teal' (for light bg) | 'navy'
+function apLogoMark(size=28,variant='white'){
   const ns='http://www.w3.org/2000/svg';
-  const wrap=el('div',{css:{display:'flex',alignItems:'center',gap:'9px'}});
   const svg=document.createElementNS(ns,'svg');
   svg.setAttribute('width',String(size));svg.setAttribute('height',String(size));
-  svg.setAttribute('viewBox','0 0 40 40');
-  const bg=document.createElementNS(ns,'circle');
-  bg.setAttribute('cx','20');bg.setAttribute('cy','20');bg.setAttribute('r','20');
-  bg.setAttribute('fill','#00C9B1');svg.appendChild(bg);
+  svg.setAttribute('viewBox','0 0 50 50');
+  const c=variant==='teal'?'#00C9B1':variant==='navy'?'#0F1B3D':'#ffffff';
+  const sw=String(Math.max(3,Math.round(size*0.085)));
+  // Main A strokes
   const p1=document.createElementNS(ns,'path');
-  p1.setAttribute('d','M13 28 L20 12 L27 28');
-  p1.setAttribute('stroke','white');p1.setAttribute('stroke-width','2.5');
+  p1.setAttribute('d','M8 44 L25 6 L42 44');
+  p1.setAttribute('stroke',c);p1.setAttribute('stroke-width',sw);
   p1.setAttribute('stroke-linecap','round');p1.setAttribute('stroke-linejoin','round');
   p1.setAttribute('fill','none');svg.appendChild(p1);
+  // Crossbar
   const p2=document.createElementNS(ns,'path');
-  p2.setAttribute('d','M15.5 23 L24.5 23');
-  p2.setAttribute('stroke','white');p2.setAttribute('stroke-width','2.5');
+  p2.setAttribute('d','M15.5 30 L34.5 30');
+  p2.setAttribute('stroke',c);p2.setAttribute('stroke-width',sw);
   p2.setAttribute('stroke-linecap','round');p2.setAttribute('fill','none');
-  svg.appendChild(p2);wrap.appendChild(svg);
+  svg.appendChild(p2);
+  return svg;
+}
+
+// AP Logo Icon — the "A" mark inside the AP brand gradient box (purple → teal)
+function apLogoIcon(size=44){
+  const box=el('div',{css:{
+    width:size+'px',height:size+'px',
+    borderRadius:Math.round(size*0.26)+'px',
+    background:'linear-gradient(140deg,#5C2B8A 0%,#1A7A8A 55%,#00C9B1 100%)',
+    display:'flex',alignItems:'center',justifyContent:'center',
+    flexShrink:'0',
+    boxShadow:'0 4px 14px rgba(92,43,138,.45)'
+  }});
+  box.appendChild(apLogoMark(Math.round(size*0.62),'white'));
+  return box;
+}
+
+// Full AP wordmark — brand gradient icon + "Alternative / Payments" text
+function apLogo(size=44,dark=true){
+  const wrap=el('div',{css:{display:'flex',alignItems:'center',gap:'11px'}});
+  wrap.appendChild(apLogoIcon(size));
+  const fs=Math.max(12,Math.round(size*0.34));
   const txt=el('div',{});
   txt.appendChild(el('div',{css:{
-    fontSize:'13px',fontWeight:'700',
+    fontSize:fs+'px',fontWeight:'700',
     color:dark?'#fff':'#0F1B3D',
     letterSpacing:'0.01em',lineHeight:'1.1'
   }},'Alternative'));
   txt.appendChild(el('div',{css:{
-    fontSize:'12px',fontWeight:'400',
-    color:dark?'rgba(255,255,255,.65)':'#4A5578',
-    lineHeight:'1.1'
+    fontSize:Math.max(11,Math.round(size*0.29))+'px',fontWeight:'400',
+    color:dark?'rgba(255,255,255,.72)':'#4A5578',
+    lineHeight:'1.2'
   }},'Payments'));
   wrap.appendChild(txt);return wrap;
 }
 
-// Just the icon mark, no text — for compact use
-function apLogoMark(size=24){
-  const ns='http://www.w3.org/2000/svg';
-  const svg=document.createElementNS(ns,'svg');
-  svg.setAttribute('width',String(size));svg.setAttribute('height',String(size));
-  svg.setAttribute('viewBox','0 0 40 40');
-  const bg=document.createElementNS(ns,'circle');
-  bg.setAttribute('cx','20');bg.setAttribute('cy','20');bg.setAttribute('r','20');
-  bg.setAttribute('fill','#00C9B1');svg.appendChild(bg);
-  const p1=document.createElementNS(ns,'path');
-  p1.setAttribute('d','M13 28 L20 12 L27 28');
-  p1.setAttribute('stroke','white');p1.setAttribute('stroke-width','2.5');
-  p1.setAttribute('stroke-linecap','round');p1.setAttribute('stroke-linejoin','round');
-  p1.setAttribute('fill','none');svg.appendChild(p1);
-  const p2=document.createElementNS(ns,'path');
-  p2.setAttribute('d','M15.5 23 L24.5 23');
-  p2.setAttribute('stroke','white');p2.setAttribute('stroke-width','2.5');
-  p2.setAttribute('stroke-linecap','round');p2.setAttribute('fill','none');
-  svg.appendChild(p2);return svg;
-}
-
 function topBar(){
-  const bar=el('div',{css:{
-    display:'flex',alignItems:'center',gap:'12px',marginBottom:'1rem',
-    padding:'12px 18px',
-    background:'linear-gradient(135deg, #0F1B3D 0%, #1A2B52 100%)',
-    borderRadius:'14px',
-    boxShadow:'0 4px 20px rgba(15,27,61,.25)'
-  }});
-  bar.appendChild(apLogo(34,true));
+  const outer=el('div',{css:{marginBottom:'1rem'}});
 
-  const div=el('div',{css:{width:'1px',height:'22px',background:'rgba(255,255,255,.15)',flexShrink:'0'}});
+  // Brand accent stripe at top
+  const stripe=el('div',{css:{
+    height:'3px',borderRadius:'3px 3px 0 0',
+    background:'linear-gradient(90deg,#5C2B8A 0%,#00C9B1 100%)',
+    marginBottom:'0'
+  }});
+  outer.appendChild(stripe);
+
+  const bar=el('div',{css:{
+    display:'flex',alignItems:'center',gap:'14px',
+    padding:'14px 20px',
+    background:'linear-gradient(135deg, #0F1B3D 0%, #1A2B52 100%)',
+    borderRadius:'0 0 14px 14px',
+    boxShadow:'0 6px 24px rgba(15,27,61,.30)'
+  }});
+  bar.appendChild(apLogo(46,true));
+
+  const div=el('div',{css:{width:'1px',height:'28px',background:'rgba(255,255,255,.15)',flexShrink:'0'}});
   bar.appendChild(div);
 
   bar.appendChild(el('span',{css:{
     fontSize:'12px',fontWeight:'400',
-    color:'rgba(255,255,255,.7)',flex:'1',letterSpacing:'0.01em'
+    color:'rgba(255,255,255,.65)',flex:'1',letterSpacing:'0.02em'
   }},'Sales → Onboarding Handover'));
 
   const statusMap={
@@ -331,14 +393,15 @@ function topBar(){
     rs.appendChild(b);
   });
   bar.appendChild(rs);
-  return bar;
+  outer.appendChild(bar);
+  return outer;
 }
 
 // ----- SECTION RENDERERS -----
 
 function s0(){
   const w=el('div',{css:{display:'flex',flexDirection:'column',gap:'14px'}});
-  const g=el('div',{css:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px'}});
+  const g=el('div',{cls:'ap-grid-2',css:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px'}});
 
   const rn=el('div',{});
   rn.appendChild(lbl('Your full name *','The sales rep submitting this handover'));
@@ -350,7 +413,7 @@ function s0(){
   const cd=el('div',{});
   cd.appendChild(lbl('Assign to Specialist *','Who picks this up on day 1'));
   const se=el('select',{css:{width:'100%',boxSizing:'border-box'}});
-  se.appendChild(el('option',{value:''},'Select specialist…'));
+  se.appendChild(el('option',{value:''},'Select specialist...'));
   CSM_OPTIONS.forEach(o=>{const op=el('option',{},o);if(S.assignedCSM===o)op.selected=true;se.appendChild(op);});
   se.addEventListener('change',ev=>{S.assignedCSM=ev.target.value;track('s0');render();});
   cd.appendChild(se);g.appendChild(cd);
@@ -377,7 +440,7 @@ function s0(){
 }
 
 function s1(){
-  const g=el('div',{css:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px'}});
+  const g=el('div',{cls:'ap-grid-2',css:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px'}});
   const tW=el('div',{});tW.appendChild(lbl('Client type *'));tW.appendChild(tog(['Direct','Channel'],S.f.pType,v=>{S.f.pType=v;track('s1');render();}));
   const dW=el('div',{});dW.appendChild(lbl('Expected start date'));
   const di=el('input',{type:'date',css:{width:'100%',boxSizing:'border-box'}});
@@ -399,7 +462,7 @@ function stkB(lb,ref,rk,ico){
   const dot=el('div',{css:{width:'6px',height:'22px',background:'#00C9B1',borderRadius:'3px'}});
   hd.append(dot,ic(ico,{fontSize:'14px',color:'#4A5578'}),el('span',{css:{fontSize:'12px',fontWeight:'600',color:'#0F1B3D'}},lb));
   w.appendChild(hd);
-  const g=el('div',{css:{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'8px'}});
+  const g=el('div',{cls:'ap-grid-3',css:{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'8px'}});
   [['n','Full name'],['p','Phone'],['e','Email']].forEach(([k,ph])=>{
     const d=el('div',{});d.appendChild(lbl(ph));
     const i=el('input',{placeholder:ph,css:{width:'100%',boxSizing:'border-box'}});
@@ -666,7 +729,7 @@ function renderForm(){
       padding:'10px 14px',marginBottom:'10px',
       display:'flex',alignItems:'center',gap:'10px'
     }});
-    ban.append(apLogoMark(22),el('span',{css:{fontSize:'12px',color:'#065F56',fontWeight:'500',flex:'1'}},'Approved by '+(S.repName||S.signoff?.name)+' → '+S.assignedCSM+' · '+new Date(S.signoff.time).toLocaleString()));
+    ban.append(apLogoIcon(32),el('span',{css:{fontSize:'12px',color:'#065F56',fontWeight:'500',flex:'1'}},'Approved by '+(S.repName||S.signoff?.name)+' → '+S.assignedCSM+' · '+new Date(S.signoff.time).toLocaleString()));
     w.appendChild(ban);
   }
 
@@ -680,6 +743,9 @@ function renderForm(){
     w.appendChild(hint);
   }
 
+  // Progress bar
+  w.appendChild(progressBar());
+
   w.append(
     section('s0','user-circle','Sales rep & assignment',s0,'Who is filing this and who receives it'),
     section('s1','building-store','Account overview',s1,'Partner details and deal basics'),
@@ -692,11 +758,24 @@ function renderForm(){
 
   if(S.err){
     const eb=el('div',{css:{
-      background:'#FEF2F2',border:'1.5px solid #FECACA',borderRadius:'8px',
-      padding:'10px 13px',marginTop:'8px',
-      display:'flex',alignItems:'center',gap:'7px'
+      background:'#FEF2F2',border:'1.5px solid #FECACA',borderRadius:'10px',
+      padding:'11px 14px',marginTop:'8px',
+      display:'flex',alignItems:'flex-start',gap:'9px'
     }});
-    eb.append(ic('alert-triangle',{fontSize:'13px',color:'#DC2626'}),el('span',{css:{fontSize:'12px',color:'#991B1B'}},S.err));
+    // Build a specific list of missing fields
+    const missing=[];
+    if(!S.repName)missing.push('your name');
+    if(!S.assignedCSM)missing.push('onboarding specialist');
+    if(!S.f.pName)missing.push('company name');
+    if(!S.f.industry)missing.push('industry');
+    if(!S.f.size)missing.push('company size');
+    const msg=missing.length?'Missing required fields: '+missing.join(', ')+'.':S.err;
+    const et=el('div',{});
+    et.append(
+      el('div',{css:{fontSize:'12px',fontWeight:'600',color:'#991B1B',marginBottom:'2px'}},'Cannot continue'),
+      el('div',{css:{fontSize:'12px',color:'#991B1B',lineHeight:'1.5'}},msg)
+    );
+    eb.append(ic('alert-triangle',{fontSize:'15px',color:'#DC2626',flexShrink:'0',marginTop:'1px'}),et);
     w.appendChild(eb);
   }
 
@@ -834,7 +913,7 @@ function renderReview(){
       display:'flex',alignItems:'center',gap:'9px'
     }});
     specLine.append(
-      apLogoMark(18),
+      apLogoIcon(28),
       el('span',{css:{fontSize:'12px',color:'#065F56',fontWeight:'500'}},'Submitting to '),
       el('span',{css:{fontSize:'12px',fontWeight:'700',color:'#0F1B3D'}},S.assignedCSM||'—')
     );
@@ -842,15 +921,15 @@ function renderReview(){
 
     const ab=el('button',{css:{
       width:'100%',
-      background:'linear-gradient(135deg,#0F1B3D,#1A2B52)',
+      background:'linear-gradient(135deg,#5C2B8A,#1A7A8A 60%,#00C9B1 100%)',
       color:'#fff',border:'none',borderRadius:'10px',
-      padding:'12px',fontSize:'13px',fontWeight:'600',
+      padding:'13px',fontSize:'13px',fontWeight:'700',
       cursor:'not-allowed',fontFamily:'inherit',
-      display:'flex',alignItems:'center',justifyContent:'center',gap:'8px',
+      display:'flex',alignItems:'center',justifyContent:'center',gap:'10px',
       opacity:'0.35',transition:'opacity .15s'
     }});
     ab.disabled=true;
-    ab.append(apLogoMark(18),'Approve & send to '+(S.assignedCSM||'specialist'));
+    ab.append(apLogoMark(20,'white'),'Approve & send to '+(S.assignedCSM||'specialist'));
 
     function upd(){
       const ok=S.signName.trim()&&S.signConfirm;
@@ -882,7 +961,7 @@ function renderReview(){
       display:'flex',alignItems:'center',gap:'10px'
     }});
     const ck=el('div',{css:{flexShrink:'0'}});
-    ck.appendChild(apLogoMark(32));
+    ck.appendChild(apLogoIcon(44));
     const bt=el('div',{});
     bt.append(
       el('p',{css:{fontWeight:'700',fontSize:'13px',color:'#065F56',margin:'0 0 1px'}},'Approved by '+(S.repName||S.signoff.name)+' → '+S.assignedCSM),
@@ -911,27 +990,29 @@ function renderReview(){
 function renderGenerating(){
   const w=el('div',{});w.appendChild(topBar());
   const c=el('div',{css:{padding:'3.5rem 0',textAlign:'center'}});
-  // spinning ring around a logo icon
-  const spinWrap=el('div',{css:{position:'relative',width:'72px',height:'72px',margin:'0 auto 20px'}});
+
+  // Spinning ring around the AP brand logo icon
+  const spinWrap=el('div',{css:{position:'relative',width:'96px',height:'96px',margin:'0 auto 24px'}});
   const ring=el('div',{css:{
     position:'absolute',inset:'0',
     border:'3px solid #E2E8F4',borderTopColor:'#00C9B1',
     borderRadius:'50%'
   }});
   ring.className='spin';
-  const logoInner=el('div',{css:{
-    position:'absolute',inset:'8px',
-    background:'linear-gradient(135deg,#0F1B3D,#1A2B52)',
-    borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center'
+  const logoCenter=el('div',{css:{
+    position:'absolute',inset:'10px',
+    display:'flex',alignItems:'center',justifyContent:'center'
   }});
-  // draw A mark inline
-  const ns='http://www.w3.org/2000/svg';
-  const ms=document.createElementNS(ns,'svg');ms.setAttribute('width','28');ms.setAttribute('height','28');ms.setAttribute('viewBox','0 0 40 40');
-  const mp1=document.createElementNS(ns,'path');mp1.setAttribute('d','M13 28 L20 12 L27 28');mp1.setAttribute('stroke','#00C9B1');mp1.setAttribute('stroke-width','2.5');mp1.setAttribute('stroke-linecap','round');mp1.setAttribute('stroke-linejoin','round');mp1.setAttribute('fill','none');ms.appendChild(mp1);
-  const mp2=document.createElementNS(ns,'path');mp2.setAttribute('d','M15.5 23 L24.5 23');mp2.setAttribute('stroke','#00C9B1');mp2.setAttribute('stroke-width','2.5');mp2.setAttribute('stroke-linecap','round');mp2.setAttribute('fill','none');ms.appendChild(mp2);
-  logoInner.appendChild(ms);spinWrap.append(ring,logoInner);
-  c.append(spinWrap,
-    el('p',{css:{fontWeight:'700',fontSize:'15px',marginBottom:'5px',color:'#0F1B3D'}},S.genStep),
+  logoCenter.appendChild(apLogoIcon(76));
+  spinWrap.append(ring,logoCenter);
+
+  // Brand wordmark below spinner
+  const wordmark=el('div',{css:{display:'flex',alignItems:'center',justifyContent:'center',gap:'8px',marginBottom:'16px'}});
+  wordmark.appendChild(el('span',{css:{fontSize:'18px',fontWeight:'700',color:'#0F1B3D',letterSpacing:'0.01em'}},'Alternative'));
+  wordmark.appendChild(el('span',{css:{fontSize:'18px',fontWeight:'400',color:'#4A5578'}},'Payments'));
+
+  c.append(spinWrap, wordmark,
+    el('p',{css:{fontWeight:'600',fontSize:'14px',marginBottom:'5px',color:'#0F1B3D'}},S.genStep),
     el('p',{css:{fontSize:'12px',color:'#8B96B5'}},'Building your complete Sales → Onboarding handover…')
   );
   w.appendChild(c);
@@ -955,7 +1036,7 @@ function renderResults(){
     display:'flex',alignItems:'center',gap:'9px'
   }});
   audit.append(
-    apLogoMark(20),
+    apLogoIcon(32),
     el('span',{css:{fontSize:'11px',color:'#065F56',fontWeight:'500',flex:'1'}},'Approved by '+(S.repName||S.signoff?.name)+' → '+S.assignedCSM+' · '+(S.signoff?new Date(S.signoff.time).toLocaleString():''))
   );
   w.appendChild(audit);
@@ -1220,14 +1301,22 @@ function renderResults(){
 }
 
 function apFooter(){
-  const f=el('div',{css:{
-    marginTop:'24px',paddingTop:'14px',
-    borderTop:'1.5px solid #E2E8F4',
-    display:'flex',alignItems:'center',justifyContent:'space-between',gap:'10px'
+  // Gradient divider line
+  const wrap=el('div',{css:{marginTop:'28px'}});
+  const gradLine=el('div',{css:{
+    height:'2px',borderRadius:'2px',
+    background:'linear-gradient(90deg,#5C2B8A22 0%,#00C9B140 50%,#5C2B8A22 100%)',
+    marginBottom:'14px'
   }});
-  f.appendChild(apLogo(22,false));
+  wrap.appendChild(gradLine);
+  const f=el('div',{css:{
+    display:'flex',alignItems:'center',justifyContent:'space-between',gap:'10px',
+    paddingBottom:'4px'
+  }});
+  f.appendChild(apLogo(32,false));
   f.appendChild(el('span',{css:{fontSize:'10px',color:'#CBD5E8',letterSpacing:'0.04em'}},'Sales → Onboarding Handover · Confidential'));
-  return f;
+  wrap.appendChild(f);
+  return wrap;
 }
 
 function render(){
